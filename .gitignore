@@ -1,0 +1,12 @@
+# Xcode user data
+xcuserdata/
+
+# Build artifacts
+build/
+DerivedData/
+
+# macOS system files
+.DS_Store
+
+# Claude Code
+.claude/

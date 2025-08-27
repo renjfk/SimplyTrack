@@ -1,0 +1,20 @@
+{
+  "title": "{{TITLE}}",
+  "icon": "{{APP_PATH}}/Contents/Resources/AppIcon.icns",
+  "icon-size": 160,
+  "background": "dmg-background.png",
+  "format": "ULMO",
+  "code-sign": {
+    "signing-identity": "{{CERT_IDENTITY}}"
+  },
+  "window": {
+    "size": {
+      "width": 660,
+      "height": 400
+    }
+  },
+  "contents": [
+    { "x": 180, "y": 170, "type": "file", "path": "{{APP_PATH}}" },
+    { "x": 480, "y": 170, "type": "link", "path": "/Applications" }
+  ]
+}

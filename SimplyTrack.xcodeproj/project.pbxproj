@@ -1,0 +1,577 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		F553B42F2E5F968C0053406B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F553B4182E5F96870053406B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F553B41F2E5F96870053406B;
+			remoteInfo = SimplyTrack;
+		};
+		F553B4392E5F968C0053406B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F553B4182E5F96870053406B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F553B41F2E5F96870053406B;
+			remoteInfo = SimplyTrack;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		F553B4202E5F96870053406B /* SimplyTrack.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SimplyTrack.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F553B42E2E5F968C0053406B /* SimplyTrackTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SimplyTrackTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F553B4382E5F968C0053406B /* SimplyTrackUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SimplyTrackUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		F5B6E75F2E67A85900814042 /* Exceptions for "SimplyTrack" folder in "SimplyTrack" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = F553B41F2E5F96870053406B /* SimplyTrack */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		F553B4222E5F96870053406B /* SimplyTrack */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F5B6E75F2E67A85900814042 /* Exceptions for "SimplyTrack" folder in "SimplyTrack" target */,
+			);
+			path = SimplyTrack;
+			sourceTree = "<group>";
+		};
+		F553B4312E5F968C0053406B /* SimplyTrackTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SimplyTrackTests;
+			sourceTree = "<group>";
+		};
+		F553B43B2E5F968C0053406B /* SimplyTrackUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SimplyTrackUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		F553B41D2E5F96870053406B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F553B42B2E5F968C0053406B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F553B4352E5F968C0053406B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		F553B4172E5F96870053406B = {
+			isa = PBXGroup;
+			children = (
+				F553B4222E5F96870053406B /* SimplyTrack */,
+				F553B4312E5F968C0053406B /* SimplyTrackTests */,
+				F553B43B2E5F968C0053406B /* SimplyTrackUITests */,
+				F553B4212E5F96870053406B /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		F553B4212E5F96870053406B /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F553B4202E5F96870053406B /* SimplyTrack.app */,
+				F553B42E2E5F968C0053406B /* SimplyTrackTests.xctest */,
+				F553B4382E5F968C0053406B /* SimplyTrackUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F553B41F2E5F96870053406B /* SimplyTrack */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F553B4422E5F968C0053406B /* Build configuration list for PBXNativeTarget "SimplyTrack" */;
+			buildPhases = (
+				F553B41C2E5F96870053406B /* Sources */,
+				F553B41D2E5F96870053406B /* Frameworks */,
+				F553B41E2E5F96870053406B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F553B4222E5F96870053406B /* SimplyTrack */,
+			);
+			name = SimplyTrack;
+			packageProductDependencies = (
+			);
+			productName = SimplyTrack;
+			productReference = F553B4202E5F96870053406B /* SimplyTrack.app */;
+			productType = "com.apple.product-type.application";
+		};
+		F553B42D2E5F968C0053406B /* SimplyTrackTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F553B4452E5F968C0053406B /* Build configuration list for PBXNativeTarget "SimplyTrackTests" */;
+			buildPhases = (
+				F553B42A2E5F968C0053406B /* Sources */,
+				F553B42B2E5F968C0053406B /* Frameworks */,
+				F553B42C2E5F968C0053406B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F553B4302E5F968C0053406B /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				F553B4312E5F968C0053406B /* SimplyTrackTests */,
+			);
+			name = SimplyTrackTests;
+			packageProductDependencies = (
+			);
+			productName = SimplyTrackTests;
+			productReference = F553B42E2E5F968C0053406B /* SimplyTrackTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		F553B4372E5F968C0053406B /* SimplyTrackUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F553B4482E5F968C0053406B /* Build configuration list for PBXNativeTarget "SimplyTrackUITests" */;
+			buildPhases = (
+				F553B4342E5F968C0053406B /* Sources */,
+				F553B4352E5F968C0053406B /* Frameworks */,
+				F553B4362E5F968C0053406B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F553B43A2E5F968C0053406B /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				F553B43B2E5F968C0053406B /* SimplyTrackUITests */,
+			);
+			name = SimplyTrackUITests;
+			packageProductDependencies = (
+			);
+			productName = SimplyTrackUITests;
+			productReference = F553B4382E5F968C0053406B /* SimplyTrackUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F553B4182E5F96870053406B /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					F553B41F2E5F96870053406B = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					F553B42D2E5F968C0053406B = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = F553B41F2E5F96870053406B;
+					};
+					F553B4372E5F968C0053406B = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = F553B41F2E5F96870053406B;
+					};
+				};
+			};
+			buildConfigurationList = F553B41B2E5F96870053406B /* Build configuration list for PBXProject "SimplyTrack" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = F553B4172E5F96870053406B;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = F553B4212E5F96870053406B /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F553B41F2E5F96870053406B /* SimplyTrack */,
+				F553B42D2E5F968C0053406B /* SimplyTrackTests */,
+				F553B4372E5F968C0053406B /* SimplyTrackUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		F553B41E2E5F96870053406B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F553B42C2E5F968C0053406B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F553B4362E5F968C0053406B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		F553B41C2E5F96870053406B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F553B42A2E5F968C0053406B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F553B4342E5F968C0053406B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		F553B4302E5F968C0053406B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F553B41F2E5F96870053406B /* SimplyTrack */;
+			targetProxy = F553B42F2E5F968C0053406B /* PBXContainerItemProxy */;
+		};
+		F553B43A2E5F968C0053406B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F553B41F2E5F96870053406B /* SimplyTrack */;
+			targetProxy = F553B4392E5F968C0053406B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		F553B4402E5F968C0053406B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = WD9D8KHH6Y;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		F553B4412E5F968C0053406B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = WD9D8KHH6Y;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		F553B4432E5F968C0053406B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CODE_SIGN_ENTITLEMENTS = SimplyTrack/SimplyTrack.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 0;
+				DEVELOPMENT_TEAM = WD9D8KHH6Y;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SimplyTrack/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.renjfk.SimplyTrack;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		F553B4442E5F968C0053406B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CODE_SIGN_ENTITLEMENTS = SimplyTrack/SimplyTrack.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 0;
+				DEVELOPMENT_TEAM = WD9D8KHH6Y;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SimplyTrack/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.renjfk.SimplyTrack;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		F553B4462E5F968C0053406B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 42;
+				DEVELOPMENT_TEAM = WD9D8KHH6Y;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.renjfk.SimplyTrackTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SimplyTrack.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SimplyTrack";
+			};
+			name = Debug;
+		};
+		F553B4472E5F968C0053406B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 42;
+				DEVELOPMENT_TEAM = WD9D8KHH6Y;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.renjfk.SimplyTrackTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SimplyTrack.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SimplyTrack";
+			};
+			name = Release;
+		};
+		F553B4492E5F968C0053406B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 42;
+				DEVELOPMENT_TEAM = WD9D8KHH6Y;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.renjfk.SimplyTrackUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = SimplyTrack;
+			};
+			name = Debug;
+		};
+		F553B44A2E5F968C0053406B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 42;
+				DEVELOPMENT_TEAM = WD9D8KHH6Y;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.renjfk.SimplyTrackUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = SimplyTrack;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F553B41B2E5F96870053406B /* Build configuration list for PBXProject "SimplyTrack" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F553B4402E5F968C0053406B /* Debug */,
+				F553B4412E5F968C0053406B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F553B4422E5F968C0053406B /* Build configuration list for PBXNativeTarget "SimplyTrack" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F553B4432E5F968C0053406B /* Debug */,
+				F553B4442E5F968C0053406B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F553B4452E5F968C0053406B /* Build configuration list for PBXNativeTarget "SimplyTrackTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F553B4462E5F968C0053406B /* Debug */,
+				F553B4472E5F968C0053406B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F553B4482E5F968C0053406B /* Build configuration list for PBXNativeTarget "SimplyTrackUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F553B4492E5F968C0053406B /* Debug */,
+				F553B44A2E5F968C0053406B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = F553B4182E5F96870053406B /* Project object */;
+}

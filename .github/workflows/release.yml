@@ -1,0 +1,378 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on version tags like v1.0.0, v1.1.0, etc.
+
+permissions:
+  contents: write
+
+env:
+  XCODE_VERSION: latest-stable
+  NODE_VERSION: '18'
+
+jobs:
+  prepare:
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release_notes: ${{ steps.release_notes.outputs.release_notes }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for release notes
+
+      - name: Set version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Setting version to: $VERSION"
+
+      - name: Generate Release Notes
+        id: release_notes
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          if [ -z "$LAST_TAG" ]; then
+            # First release - get all commits
+            COMMITS=$(git log --pretty=format:"* %s ([%h](https://github.com/${{ github.repository }}/commit/%H))" --no-merges)
+          else
+            # Get commits since last tag
+            COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"* %s ([%h](https://github.com/${{ github.repository }}/commit/%H))" --no-merges)
+          fi
+          
+          # Create simple release notes with linked commit hashes
+          cat << EOF > release_notes.md
+          ## Changes
+          
+          $COMMITS
+          EOF
+          
+          # Set output for next jobs
+          echo "release_notes<<EOF" >> $GITHUB_OUTPUT
+          cat release_notes.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Upload release notes artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release_notes.md
+
+  build:
+    name: Build and Sign Application
+    runs-on: macos-latest
+    needs: prepare
+    outputs:
+      app-path: ${{ steps.locate_app.outputs.app-path }}
+      cert-identity: ${{ steps.get_cert.outputs.cert-identity }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ env.XCODE_VERSION }}
+
+      - name: Update version in project
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          BUILD_NUMBER="$GITHUB_RUN_NUMBER"
+          echo "Setting version to: $VERSION"
+          echo "Setting build number to: $BUILD_NUMBER"
+          
+          # Update project build settings directly using sed
+          # Update MARKETING_VERSION
+          sed -i '' "s/MARKETING_VERSION = [^;]*/MARKETING_VERSION = $VERSION/g" SimplyTrack.xcodeproj/project.pbxproj
+          
+          # Update CURRENT_PROJECT_VERSION  
+          sed -i '' "s/CURRENT_PROJECT_VERSION = [^;]*/CURRENT_PROJECT_VERSION = $BUILD_NUMBER/g" SimplyTrack.xcodeproj/project.pbxproj
+          
+          # Verify the changes
+          echo "Updated build settings:"
+          xcodebuild -project SimplyTrack.xcodeproj -showBuildSettings | grep -E "(MARKETING_VERSION|CURRENT_PROJECT_VERSION)"
+
+      - name: Import signing certificate
+        env:
+          MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
+          MACOS_SIGN_PASSWORD: ${{ secrets.MACOS_SIGN_PASSWORD }}
+        run: |
+          # Import certificate to custom keychain (avoids login keychain issues)
+          echo "$MACOS_SIGN_P12" | base64 --decode > certificate.p12
+          
+          # Create and setup custom keychain
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
+          
+          # Import certificate to custom keychain
+          security import certificate.p12 -P "$MACOS_SIGN_PASSWORD" -k build.keychain -T /usr/bin/codesign -T /usr/bin/xcodebuild
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain
+          
+          rm certificate.p12
+
+      - name: Extract certificate info
+        id: get_cert
+        run: |
+          # Extract certificate name and team ID from custom keychain (do once)
+          CERT_LINE=$(security find-identity -v -p codesigning build.keychain | grep "Developer ID Application" | head -n 1)
+          CERT_IDENTITY=$(echo "$CERT_LINE" | sed 's/.*"\(.*\)".*/\1/')
+          TEAM_ID=$(echo "$CERT_IDENTITY" | sed 's/.*(\([A-Z0-9]*\)).*/\1/')
+          
+          echo "cert-identity=$CERT_IDENTITY" >> $GITHUB_OUTPUT
+          echo "team-id=$TEAM_ID" >> $GITHUB_OUTPUT
+          echo "Using certificate: $CERT_IDENTITY"
+          echo "Using team ID: $TEAM_ID"
+
+      - name: Build and Archive
+        timeout-minutes: 10
+        run: |
+          CERT_IDENTITY="${{ steps.get_cert.outputs.cert-identity }}"
+          TEAM_ID="${{ steps.get_cert.outputs.team-id }}"
+          
+          # Build with explicit certificate and team
+          xcodebuild -project SimplyTrack.xcodeproj \
+            -scheme SimplyTrack \
+            -configuration Release \
+            -archivePath build/SimplyTrack.xcarchive \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="$CERT_IDENTITY" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            archive
+
+      - name: Export signed app
+        run: |
+          # Export signed application
+          xcodebuild -exportArchive \
+            -archivePath build/SimplyTrack.xcarchive \
+            -exportPath build/ \
+            -exportOptionsPlist exportOptions.plist
+
+      - name: Locate app bundle
+        id: locate_app
+        run: |
+          APP_PATH=$(find build -name "*.app" -type d | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "No .app bundle found in build directory"
+            exit 1
+          fi
+          echo "app-path=$APP_PATH" >> $GITHUB_OUTPUT
+          echo "Located app bundle: $APP_PATH"
+
+      - name: Upload signed app
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-app
+          path: build/
+
+      - name: Cleanup keychain
+        if: always()
+        run: |
+          security delete-keychain build.keychain || true
+
+  notarize:
+    name: Notarize & Package
+    runs-on: macos-latest
+    needs: [prepare, build]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download signed app
+        uses: actions/download-artifact@v4
+        with:
+          name: signed-app
+          path: build/
+
+      - name: Fix executable permissions after download
+        run: |
+          # Find and fix executable permissions for all app bundles
+          find build -name "*.app" -type d | while read APP_PATH; do
+            if [ -d "$APP_PATH/Contents/MacOS" ]; then
+              echo "Fixing permissions for: $APP_PATH"
+              find "$APP_PATH/Contents/MacOS" -type f -exec chmod +x {} \;
+              ls -la "$APP_PATH/Contents/MacOS/"
+            fi
+          done
+
+      - name: Import signing certificate for DMG
+        env:
+          MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
+          MACOS_SIGN_PASSWORD: ${{ secrets.MACOS_SIGN_PASSWORD }}
+        run: |
+          # Import certificate to custom keychain for DMG signing
+          echo "$MACOS_SIGN_P12" | base64 --decode > certificate.p12
+          
+          # Create and setup custom keychain
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
+          
+          # Import certificate to custom keychain
+          security import certificate.p12 -P "$MACOS_SIGN_PASSWORD" -k build.keychain -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain
+          
+          rm certificate.p12
+
+      - name: Setup notarization credentials
+        env:
+          MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+          MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+          MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
+        run: |
+          # Create AuthKey file for notarization
+          mkdir -p ~/private_keys
+          
+          # Decode base64 key (if it's base64 encoded) or write directly
+          if echo "$MACOS_NOTARY_KEY" | base64 -d > /tmp/test_key 2>/dev/null; then
+            echo "Key is base64 encoded, decoding..."
+            echo "$MACOS_NOTARY_KEY" | base64 -d > ~/private_keys/AuthKey_$MACOS_NOTARY_KEY_ID.p8
+          else
+            echo "Key is raw format, using directly..."
+            echo "$MACOS_NOTARY_KEY" > ~/private_keys/AuthKey_$MACOS_NOTARY_KEY_ID.p8
+          fi
+          
+          # Ensure correct permissions
+          chmod 600 ~/private_keys/AuthKey_$MACOS_NOTARY_KEY_ID.p8
+          
+          # Validate key format
+          echo "Validating key format..."
+          openssl pkey -in ~/private_keys/AuthKey_$MACOS_NOTARY_KEY_ID.p8 -text -noout || {
+            echo "Invalid key format. Trying to fix newlines..."
+            # Fix potential newline issues
+            echo "$MACOS_NOTARY_KEY" | tr -d '\r' | sed 's/\\n/\n/g' > ~/private_keys/AuthKey_$MACOS_NOTARY_KEY_ID.p8
+            chmod 600 ~/private_keys/AuthKey_$MACOS_NOTARY_KEY_ID.p8
+          }
+          
+          # Use unique profile name to avoid conflicts
+          PROFILE_NAME="notary-profile-$GITHUB_RUN_ID"
+          echo "NOTARY_PROFILE=$PROFILE_NAME" >> $GITHUB_ENV
+          
+          # Store notarization credentials with unique profile
+          xcrun notarytool store-credentials "$PROFILE_NAME" \
+            --key "~/private_keys/AuthKey_$MACOS_NOTARY_KEY_ID.p8" \
+            --key-id "$MACOS_NOTARY_KEY_ID" \
+            --issuer "$MACOS_NOTARY_ISSUER_ID"
+
+      - name: Setup Node.js for appdmg
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Install appdmg
+        run: npm install -g appdmg
+
+      - name: Create and notarize DMG
+        id: create_dmg
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          APP_PATH="${{ needs.build.outputs.app-path }}"
+          CERT_IDENTITY="${{ needs.build.outputs.cert-identity }}"
+          
+          echo "Using app bundle: $APP_PATH"
+          
+          # Create appdmg configuration from template
+          sed "s|{{TITLE}}|SimplyTrack $VERSION|g; s|{{APP_PATH}}|$APP_PATH|g; s|{{CERT_IDENTITY}}|$CERT_IDENTITY|g" appdmg.template.json > appdmg_temp.json
+          
+          # Create signed DMG using appdmg (no temp directory needed)
+          appdmg appdmg_temp.json "SimplyTrack-$VERSION.dmg"
+          
+          # Clean up
+          rm appdmg_temp.json
+          
+          # Notarize the DMG
+          xcrun notarytool submit "SimplyTrack-$VERSION.dmg" \
+            --keychain-profile "$NOTARY_PROFILE" \
+            --wait
+          
+          # Staple the notarization
+          xcrun stapler staple "SimplyTrack-$VERSION.dmg"
+          
+          # Create static-named copy for easy downloading
+          cp "SimplyTrack-$VERSION.dmg" "SimplyTrack.dmg"
+          
+          # Generate checksum files for both
+          shasum -a 256 "SimplyTrack-$VERSION.dmg" > "SimplyTrack-$VERSION.dmg.sha256"
+          shasum -a 256 "SimplyTrack.dmg" > "SimplyTrack.dmg.sha256"
+
+      - name: Verify notarization
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          APP_PATH="${{ needs.build.outputs.app-path }}"
+          
+          echo "=== Verifying App Signature ==="
+          codesign -vv -d "$APP_PATH"
+          echo ""
+          
+          echo "=== Checking App Signature Validity ==="
+          codesign -v "$APP_PATH"
+          echo ""
+          
+          echo "=== Checking Gatekeeper Assessment ==="
+          spctl -a -t exec -vv "$APP_PATH"
+          echo ""
+          
+          echo "=== Verifying DMG Stapling ==="
+          xcrun stapler validate "SimplyTrack-$VERSION.dmg"
+
+      - name: Upload final DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-dmg
+          path: |
+            SimplyTrack-*.dmg
+            SimplyTrack.dmg
+            SimplyTrack-*.dmg.sha256
+            SimplyTrack.dmg.sha256
+
+      - name: Cleanup credentials
+        if: always()
+        run: |
+          rm -rf ~/private_keys || true
+          security delete-keychain build.keychain || true
+
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [prepare, notarize]
+    
+    steps:
+      - name: Download release DMG
+        uses: actions/download-artifact@v4
+        with:
+          name: release-dmg
+          path: build/
+
+      - name: Download release notes
+        uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+          path: ./
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            build/SimplyTrack-*.dmg
+            build/SimplyTrack.dmg
+            build/SimplyTrack-*.dmg.sha256
+            build/SimplyTrack.dmg.sha256
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
