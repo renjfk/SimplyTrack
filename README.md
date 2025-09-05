@@ -1,8 +1,16 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Latest Release](https://img.shields.io/github/v/release/renjfk/SimplyTrack)](https://github.com/renjfk/SimplyTrack/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/renjfk/SimplyTrack/total)](https://github.com/renjfk/SimplyTrack/releases)
+
+<p align="center">
+ <img width="200" alt="SimplyTrack Icon" src="SimplyTrack/Assets.xcassets/AppIcon.appiconset/icon_512x512%402x.png">
+</p>
+
 # SimplyTrack
 
 A simple, elegant macOS productivity tracking app that helps you monitor your application and website usage patterns.
 
-![Demo Video](Screenshots/Screen_Recording.mov)
+![Demo Video](https://github.com/user-attachments/assets/f6a87477-df34-4151-8bb4-3e2a24addc2c)
 ![Screenshot 1](Screenshots/Screenshot_1.png)
 ![Screenshot 2](Screenshots/Screenshot_2.png)
 ![Screenshot 3](Screenshots/Screenshot_3.png)
