@@ -84,15 +84,46 @@ SimplyTrack requires several macOS permissions to function properly:
 The app provides helpful banners and direct links to the appropriate system preference panes when permissions are
 needed.
 
-## TODO
-
-- [ ] **Unit Tests**: Comprehensive test coverage for core functionality
-- [ ] **UI Tests**: Automated UI testing for user interactions
-
 ## Contributing
 
 SimplyTrack is open to contributions and ideas! Whether you're a developer wanting to add features or a user with
 suggestions, your input is valuable.
+
+### Issue Conventions
+
+When creating issues, please follow our simple naming convention:
+
+**Format:** `type: brief description`
+
+#### Issue Types
+
+- `feat:` - New features or functionality
+- `fix:` - Bug fixes  
+- `enhance:` - Improvements to existing features
+- `chore:` - Maintenance tasks, dependencies, cleanup
+- `docs:` - Documentation updates
+- `build:` - Build system, CI/CD changes
+
+#### Examples
+
+- `feat: add CSV export functionality`
+- `fix: app crashes when importing large files`
+- `enhance: improve data loading performance`
+- `chore: update dependencies to latest versions`
+- `docs: update README with installation instructions`
+- `build: update Xcode project settings`
+
+#### Guidelines
+
+- Use lowercase for the description
+- Be specific and actionable
+- Keep under 60 characters
+- No period at the end
+
+## TODO
+
+- [ ] **Unit Tests**: Comprehensive test coverage for core functionality
+- [ ] **UI Tests**: Automated UI testing for user interactions
 
 ## License
 
