@@ -301,16 +301,14 @@ jobs:
           # Staple the notarization
           xcrun stapler staple "SimplyTrack-$VERSION.dmg"
           
-          # Create static-named copy for easy downloading
-          cp "SimplyTrack-$VERSION.dmg" "SimplyTrack.dmg"
+          # Rename to static name for easy downloading
+          mv "SimplyTrack-$VERSION.dmg" "SimplyTrack.dmg"
           
-          # Generate checksum files for both
-          shasum -a 256 "SimplyTrack-$VERSION.dmg" > "SimplyTrack-$VERSION.dmg.sha256"
+          # Generate checksum file
           shasum -a 256 "SimplyTrack.dmg" > "SimplyTrack.dmg.sha256"
 
       - name: Verify notarization
         run: |
-          VERSION="${{ needs.prepare.outputs.version }}"
           APP_PATH="${{ needs.build.outputs.app-path }}"
           
           echo "=== Verifying App Signature ==="
@@ -326,16 +324,14 @@ jobs:
           echo ""
           
           echo "=== Verifying DMG Stapling ==="
-          xcrun stapler validate "SimplyTrack-$VERSION.dmg"
+          xcrun stapler validate "SimplyTrack.dmg"
 
       - name: Upload final DMG
         uses: actions/upload-artifact@v4
         with:
           name: release-dmg
           path: |
-            SimplyTrack-*.dmg
             SimplyTrack.dmg
-            SimplyTrack-*.dmg.sha256
             SimplyTrack.dmg.sha256
 
       - name: Cleanup credentials
@@ -366,9 +362,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            build/SimplyTrack-*.dmg
             build/SimplyTrack.dmg
-            build/SimplyTrack-*.dmg.sha256
             build/SimplyTrack.dmg.sha256
           body_path: release_notes.md
           draft: false
