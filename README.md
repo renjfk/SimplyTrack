@@ -122,6 +122,10 @@ When creating issues, please follow our simple naming convention:
 
 ## Development
 
+### Release Process
+
+Manual releases with GitHub MCP integration - see [RELEASE_PROCESS.md](RELEASE_PROCESS.md).
+
 For planned improvements and testing infrastructure, see [issue #9](https://github.com/renjfk/SimplyTrack/issues/9).
 
 ## License

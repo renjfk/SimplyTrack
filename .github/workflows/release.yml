@@ -1,9 +1,26 @@
 name: Build and Release
 
 on:
-  push:
-    tags:
-      - 'v*'  # Triggers on version tags like v1.0.0, v1.1.0, etc.
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag (e.g., v1.0.0)'
+        required: true
+        type: string
+      release_notes:
+        description: 'Release notes content (markdown supported)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
+      draft:
+        description: 'Create as draft release'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -24,42 +41,45 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Need full history for release notes
+          fetch-depth: 0
 
-      - name: Set version from tag
+      - name: Create and push release tag
+        run: |
+          RELEASE_TAG="${{ github.event.inputs.release_tag }}"
+          
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Create tag if it doesn't exist
+          if ! git rev-parse "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Creating new tag: $RELEASE_TAG"
+            git tag -a "$RELEASE_TAG" -m "Release $RELEASE_TAG"
+            git push origin "$RELEASE_TAG"
+          else
+            echo "Tag $RELEASE_TAG already exists"
+          fi
+
+      - name: Extract version from tag
         id: version
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
+          RELEASE_TAG="${{ github.event.inputs.release_tag }}"
+          VERSION=${RELEASE_TAG#v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Setting version to: $VERSION"
 
-      - name: Generate Release Notes
+      - name: Save release notes
         id: release_notes
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          
-          # Get commits since last tag
-          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          
-          if [ -z "$LAST_TAG" ]; then
-            # First release - get all commits
-            COMMITS=$(git log --pretty=format:"* %s ([%h](https://github.com/${{ github.repository }}/commit/%H))" --no-merges)
-          else
-            # Get commits since last tag
-            COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"* %s ([%h](https://github.com/${{ github.repository }}/commit/%H))" --no-merges)
-          fi
-          
-          # Create simple release notes with linked commit hashes
-          cat << EOF > release_notes.md
-          ## Changes
-          
-          $COMMITS
+          # Save the provided release notes
+          cat << 'EOF' > release_notes.md
+          ${{ github.event.inputs.release_notes }}
           EOF
           
           # Set output for next jobs
-          echo "release_notes<<EOF" >> $GITHUB_OUTPUT
+          echo "release_notes<<NOTES_EOF" >> $GITHUB_OUTPUT
           cat release_notes.md >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "NOTES_EOF" >> $GITHUB_OUTPUT
 
       - name: Upload release notes artifact
         uses: actions/upload-artifact@v4
@@ -361,12 +381,13 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ github.event.inputs.release_tag }}
           files: |
             build/SimplyTrack.dmg
             build/SimplyTrack.dmg.sha256
           body_path: release_notes.md
-          draft: false
-          prerelease: false
-          generate_release_notes: true
+          draft: ${{ github.event.inputs.draft }}
+          prerelease: ${{ github.event.inputs.prerelease }}
+          generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
