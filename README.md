@@ -120,10 +120,9 @@ When creating issues, please follow our simple naming convention:
 - Keep under 60 characters
 - No period at the end
 
-## TODO
+## Development
 
-- [ ] **Unit Tests**: Comprehensive test coverage for core functionality
-- [ ] **UI Tests**: Automated UI testing for user interactions
+For planned improvements and testing infrastructure, see [issue #9](https://github.com/renjfk/SimplyTrack/issues/9).
 
 ## License
 
