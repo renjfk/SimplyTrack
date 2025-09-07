@@ -151,12 +151,12 @@ struct ContentView: View {
         .frame(width: 340, height: 600)
         .onChange(of: selectedDate) { _, _ in
             isViewingTodayWhenSelected = viewMode == .day && Calendar.current.isDate(selectedDate, inSameDayAs: Date())
-            MockDataGenerator.populateWithMockData(
-                for: selectedDate,
-                modelContext: modelContext,
-                config: MockDataConfig.intense,
-                sampleFromDate: { let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f.date(from: "2025-09-05") ?? Date() }()
-            )
+//            MockDataGenerator.populateWithMockData(
+//                for: selectedDate,
+//                modelContext: modelContext,
+//                config: MockDataConfig.intense,
+//                sampleFromDate: { let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f.date(from: "2025-09-05") ?? Date() }()
+//            )
             refreshCachedValues()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("PopoverWillShow"))) { _ in
