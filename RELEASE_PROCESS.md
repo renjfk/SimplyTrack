@@ -107,4 +107,4 @@ Claude Desktop will:
 
 ---
 
-*Use the master prompt in Claude Desktop to start your next release. The entire process from commit analysis to workflow trigger will be handled automatically with human approval checkpoints.*
+*Use the master prompt in Claude Desktop to start your next release. See [MCP_RELEASE_EXAMPLE.md](MCP_RELEASE_EXAMPLE.md) for a complete example session.*
