@@ -1,1 +1,0 @@
-- When creating PRs, always be concise with simple description and a simple list of changes and at the end mention the issue such as Closes #X or if it's a bug fix Fixes #X
