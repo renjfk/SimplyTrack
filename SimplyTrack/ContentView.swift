@@ -21,6 +21,9 @@ struct ContentView: View {
     @State private var loginItemPermissionDenied = false
     @EnvironmentObject private var appDelegate: AppDelegate
     
+    // Track when user is viewing "today" for automatic date updates
+    @State private var isViewingTodayWhenSelected = true
+    
     // Cached computed values
     @State private var cachedWorkPeriods: [(startTime: Date, endTime: Date, duration: TimeInterval)] = []
     @State private var cachedWeeklyActivity: [String: TimeInterval] = [:]
@@ -145,6 +148,7 @@ struct ContentView: View {
         }
         .frame(width: 340, height: 600)
         .onChange(of: selectedDate) { _, _ in
+            isViewingTodayWhenSelected = viewMode == .day && Calendar.current.isDate(selectedDate, inSameDayAs: Date())
 //            MockDataGenerator.populateWithMockData(
 //                for: selectedDate, 
 //                modelContext: modelContext, 
@@ -154,6 +158,9 @@ struct ContentView: View {
             refreshCachedValues()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("PopoverWillShow"))) { _ in
+            if isViewingTodayWhenSelected {
+                selectedDate = Date()
+            }
             refreshCachedValues()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("PopoverDidClose"))) { _ in
@@ -214,9 +221,6 @@ struct ContentView: View {
         }
     }
     
-    
-    
-
     private var bottomControls: some View {
         HStack {
             Spacer()
@@ -558,9 +562,6 @@ struct ContentView: View {
             NSWorkspace.shared.open(url)
         }
     }
-    
-    
-
 }
 
 #Preview {
