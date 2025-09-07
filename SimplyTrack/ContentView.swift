@@ -21,6 +21,8 @@ struct ContentView: View {
     @State private var loginItemPermissionDenied = false
     @EnvironmentObject private var appDelegate: AppDelegate
     
+    @State private var showingClearDataConfirmation = false
+    
     // Track when user is viewing "today" for automatic date updates
     @State private var isViewingTodayWhenSelected = true
     
@@ -149,12 +151,12 @@ struct ContentView: View {
         .frame(width: 340, height: 600)
         .onChange(of: selectedDate) { _, _ in
             isViewingTodayWhenSelected = viewMode == .day && Calendar.current.isDate(selectedDate, inSameDayAs: Date())
-//            MockDataGenerator.populateWithMockData(
-//                for: selectedDate, 
-//                modelContext: modelContext, 
-//                config: MockDataConfig.intense,
-//                sampleFromDate: { let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f.date(from: "2025-09-05") ?? Date() }()
-//            )
+            MockDataGenerator.populateWithMockData(
+                for: selectedDate,
+                modelContext: modelContext,
+                config: MockDataConfig.intense,
+                sampleFromDate: { let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f.date(from: "2025-09-05") ?? Date() }()
+            )
             refreshCachedValues()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("PopoverWillShow"))) { _ in
@@ -171,6 +173,18 @@ struct ContentView: View {
             Button("OK") { showingError = false }
         } message: {
             Text(errorMessage ?? "An unknown error occurred")
+        }
+        .confirmationDialog(
+            "Clear \(viewMode == .day ? "Day" : "Week") Data",
+            isPresented: $showingClearDataConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Clear Data", role: .destructive) {
+                clearData(for: selectedDate, period: viewMode)
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This will permanently delete all tracking data for the selected \(viewMode == .day ? "day" : "week"). This action cannot be undone.")
         }
     }
 
@@ -236,7 +250,11 @@ struct ContentView: View {
             
             Spacer()
 
-            SettingsMenuView(loginItemPermissionDenied: $loginItemPermissionDenied)
+            SettingsMenuView(
+                loginItemPermissionDenied: $loginItemPermissionDenied,
+                viewMode: viewMode,
+                showingClearDataConfirmation: $showingClearDataConfirmation
+            )
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -560,6 +578,38 @@ struct ContentView: View {
     private func openNotificationSettings() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.notifications") {
             NSWorkspace.shared.open(url)
+        }
+    }
+    
+    private func clearData(for date: Date, period: ViewMode) {
+        let calendar = Calendar.current
+        let (startDate, endDate, errorContext): (Date, Date, String)
+        
+        if period == .day {
+            let startOfDay = calendar.startOfDay(for: date)
+            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+            (startDate, endDate, errorContext) = (startOfDay, endOfDay, "Failed to clear day data")
+        } else {
+            let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: date)?.start ?? date
+            let endOfWeek = calendar.date(byAdding: .weekOfYear, value: 1, to: startOfWeek)!
+            (startDate, endDate, errorContext) = (startOfWeek, endOfWeek, "Failed to clear week data")
+        }
+        
+        do {
+            let descriptor = FetchDescriptor<UsageSession>(
+                predicate: #Predicate<UsageSession> { session in
+                    session.startTime >= startDate && session.startTime < endDate
+                }
+            )
+            let sessions = try modelContext.fetch(descriptor)
+            try modelContext.transaction {
+                for session in sessions {
+                    modelContext.delete(session)
+                }
+            }
+            refreshCachedValues()
+        } catch {
+            handleError(error, context: errorContext)
         }
     }
 }

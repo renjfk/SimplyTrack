@@ -14,6 +14,9 @@ struct SettingsMenuView: View {
     @State private var showingUpdateAlert = false
     @State private var updateError: UpdateError?
     
+    let viewMode: ContentView.ViewMode
+    @Binding var showingClearDataConfirmation: Bool
+    
     var body: some View {
         Menu {
             Button("About") {
@@ -32,6 +35,19 @@ struct SettingsMenuView: View {
                     } else if launchAtLoginEnabled {
                         Image(systemName: "checkmark")
                     }
+                }
+            }
+            
+            Divider()
+            
+            Button(action: {
+                showingClearDataConfirmation = true
+            }) {
+                HStack {
+                    Text("Clear \(viewMode == .day ? "Day" : "Week") Data")
+                    Spacer()
+                    Image(systemName: "trash")
+                        .foregroundColor(.red)
                 }
             }
             
