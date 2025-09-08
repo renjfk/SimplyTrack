@@ -16,20 +16,11 @@ import UserNotifications
 struct SimplyTrackApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
-    let modelContainer: ModelContainer = {
-        do {
-            return try ModelContainer(for: UsageSession.self, Icon.self)
-        } catch {
-            // For main app container, we still need to fail hard since the app can't function
-            fatalError("Failed to create main model container: \(error)")
-        }
-    }()
-    
     var body: some Scene {
         Settings {
             EmptyView()
         }
-        .modelContainer(modelContainer)
+        .modelContainer(DatabaseManager.shared.modelContainer)
     }
 }
 
@@ -100,6 +91,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNUserNot
         }
     }
     
+    
     func setupMenuBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
@@ -109,6 +101,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNUserNot
             } else {
                 statusButton.image = NSImage(systemSymbolName: "clock", accessibilityDescription: "SimplyTrack")
             }
+            
+            #if DEBUG
+            statusButton.toolTip = "SimplyTrack (Debug Mode)"
+            #else
+            statusButton.toolTip = "SimplyTrack"
+            #endif
+            
             statusButton.action = #selector(togglePopover)
             statusButton.target = self
         }
@@ -124,26 +123,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNUserNot
         popover?.contentSize = NSSize(width: 340, height: 600)
         popover?.behavior = .transient
         
-        do {
-            modelContainer = try ModelContainer(for: UsageSession.self, Icon.self)
-            popover?.contentViewController = NSHostingController(
-                rootView: ContentView()
-                    .modelContainer(modelContainer!)
-                    .environmentObject(self)
-            )
-            popover?.delegate = self
-        } catch {
-            showError("Failed to initialize popover database", error: error)
-        }
+        modelContainer = DatabaseManager.shared.modelContainer
+        popover?.contentViewController = NSHostingController(
+            rootView: ContentView()
+                .modelContainer(modelContainer!)
+                .environmentObject(self)
+        )
+        popover?.delegate = self
     }
     
     func setupTracking() {
-        do {
-            modelContainer = try ModelContainer(for: UsageSession.self, Icon.self)
-            startTracking()
-        } catch {
-            showError("Failed to initialize tracking system", error: error)
-        }
+        modelContainer = DatabaseManager.shared.modelContainer
+        startTracking()
     }
     
     private func startTracking() {
@@ -305,7 +296,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNUserNot
         guard let url = Bundle.main.url(forResource: "MenuIcon", withExtension: "svg") else {
             return nil
         }
-        return try? Data(contentsOf: url)
+        
+        guard var svgString = try? String(contentsOf: url) else {
+            return nil
+        }
+        
+        #if DEBUG
+        // Make the entire icon yellow for debug builds
+        svgString = svgString.replacingOccurrences(of: "stroke:#ffffff", with: "stroke:#ffff00")
+        #endif
+        
+        return svgString.data(using: .utf8)
     }
     
     private func getAppIconAsPNG(for app: NSRunningApplication) -> Data? {
