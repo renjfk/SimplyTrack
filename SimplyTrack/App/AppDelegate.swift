@@ -148,9 +148,4 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         menuBarManager?.togglePopover()
     }
     
-    /// Resets the selected date to today.
-    /// Used when opening popover from status bar or when user wants to return to current day.
-    func resetToTodayView() {
-        selectedDate = Date()
-    }
 }

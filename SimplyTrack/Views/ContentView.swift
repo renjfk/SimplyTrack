@@ -153,7 +153,7 @@ struct ContentView: View {
         }
         .frame(width: 340, height: 600)
         .onChange(of: selectedDate) { _, _ in
-            isViewingTodayWhenSelected = viewMode == .day && Calendar.current.isDate(selectedDate, inSameDayAs: Date())
+            updateTodayViewingStatus()
 //            MockDataGenerator.populateWithMockData(
 //                for: selectedDate,
 //                modelContext: modelContext,
@@ -191,6 +191,7 @@ struct ContentView: View {
         }
         .onReceive(appDelegate.$selectedDate) { newDate in
             selectedDate = newDate
+            updateTodayViewingStatus()
         }
     }
 
@@ -553,6 +554,10 @@ struct ContentView: View {
     
 
     // MARK: - Helper Methods
+
+    private func updateTodayViewingStatus() {
+        isViewingTodayWhenSelected = viewMode == .day && Calendar.current.isDate(selectedDate, inSameDayAs: Date())
+    }
 
     private func previousPeriod() {
         if viewMode == .day {

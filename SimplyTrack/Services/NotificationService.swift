@@ -22,12 +22,8 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
     // MARK: - Dependencies
     
     private let modelContainer: ModelContainer
-    
     private weak var appDelegate: AppDelegate?
     
-    // MARK: - Timers
-    
-    private var summaryNotificationTimer: Timer?
     
     // MARK: - Settings
     
@@ -81,19 +77,13 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
     /// Starts the notification scheduler that checks for daily summary notifications.
     /// Creates a timer that runs every 5 minutes to check if it's time to send the daily notification.
     func startNotificationScheduler() {
-        summaryNotificationTimer = Timer.scheduledTimer(withTimeInterval: 300.0, repeats: true) { _ in
+        Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { _ in
             Task { @MainActor in
                 await self.checkForDailyNotification()
             }
         }
     }
     
-    /// Stops the notification scheduler and cleans up resources.
-    /// Invalidates the timer used for daily notification checks.
-    func stopNotificationScheduler() {
-        summaryNotificationTimer?.invalidate()
-        summaryNotificationTimer = nil
-    }
     
     // MARK: - Daily Summary Logic
     

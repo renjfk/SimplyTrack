@@ -50,7 +50,7 @@ class MenuBarManager: NSObject, NSPopoverDelegate {
             statusButton.toolTip = "SimplyTrack"
             #endif
             
-            statusButton.action = #selector(togglePopoverFromStatusBar)
+            statusButton.action = #selector(togglePopover)
             statusButton.target = self
         }
         
@@ -72,17 +72,9 @@ class MenuBarManager: NSObject, NSPopoverDelegate {
         popover?.delegate = self
     }
     
-    /// Handles status bar clicks by resetting to today view and showing popover.
-    /// Ensures consistent state when user clicks the menu bar icon.
-    @objc func togglePopoverFromStatusBar() {
-        // Reset to today view when opened from status bar
-        appDelegate?.resetToTodayView()
-        togglePopover()
-    }
-    
     /// Shows or hides the popover window.
     /// Called by AppDelegate and status bar interaction handlers.
-    func togglePopover() {
+    @objc func togglePopover() {
         guard let statusButton = statusItem?.button else { return }
         
         if let popover = popover {
@@ -143,10 +135,8 @@ class MenuBarManager: NSObject, NSPopoverDelegate {
     }
     
     /// Called when popover is closed.
-    /// Resets app state to today view and posts notification for cleanup.
+    /// Posts notification for cleanup.
     func popoverDidClose(_ notification: Notification) {
         NotificationCenter.default.post(name: NSNotification.Name("PopoverDidClose"), object: nil)
-        // Reset to today view when popover closes
-        appDelegate?.resetToTodayView()
     }
 }
