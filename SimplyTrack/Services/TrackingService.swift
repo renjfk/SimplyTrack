@@ -28,8 +28,6 @@ class TrackingService {
     // MARK: - Tracking State
     
     private var isTracking = false
-    private var trackingTimer: Timer?
-    private var saveTimer: Timer?
     private var currentApp: NSRunningApplication?
     
     // MARK: - Active Sessions
@@ -74,28 +72,18 @@ class TrackingService {
         }
         
         // Update activity every second to ensure accurate tracking
-        trackingTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             Task { @MainActor in
                 await self.updateCurrentActivity()
             }
         }
         
         // Save sessions every 30 seconds for data safety
-        saveTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { _ in
+        Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { _ in
             Task { @MainActor in
                 await self.sessionPersistenceService.performAtomicSave()
             }
         }
-    }
-    
-    /// Stops the tracking service and cleans up resources.
-    /// Invalidates timers and removes observers.
-    func stopTracking() {
-        isTracking = false
-        trackingTimer?.invalidate()
-        saveTimer?.invalidate()
-        NSWorkspace.shared.notificationCenter.removeObserver(self)
-        logger.info("Stopped tracking service")
     }
     
     // MARK: - Private Implementation
