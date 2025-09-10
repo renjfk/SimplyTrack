@@ -10,23 +10,24 @@ import SwiftData
 import AppKit
 import Combine
 
+/// Main application interface displayed in the menu bar popover.
+/// Coordinates usage data visualization, permission management, and user interactions.
+/// Supports both daily and weekly views with cached data for performance.
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @StateObject private var permissionManager = PermissionManager.shared
+    @StateObject private var loginItemManager = LoginItemManager.shared
     @State private var selectedDate = Date()
     @State private var viewMode: ViewMode = .day
     @State private var showingCalendar = false
     @State private var errorMessage: String?
     @State private var showingError = false
-    @State private var loginItemPermissionDenied = false
     @EnvironmentObject private var appDelegate: AppDelegate
     
     @State private var showingClearDataConfirmation = false
     
-    // Track when user is viewing "today" for automatic date updates
     @State private var isViewingTodayWhenSelected = true
     
-    // Cached computed values
     @State private var cachedWorkPeriods: [(startTime: Date, endTime: Date, duration: TimeInterval)] = []
     @State private var cachedWeeklyActivity: [String: TimeInterval] = [:]
     @State private var cachedTotalActiveTime: TimeInterval = 0
@@ -42,11 +43,9 @@ struct ContentView: View {
     @State private var showAllApps = false
     @State private var showAllWebsites = false
     
-    
     // Page view state
     @State private var currentPage = 0
     
-    // Computed display arrays based on view mode
     private var currentTopApps: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)] {
         viewMode == .day ? cachedTopApps : cachedWeeklyTopApps
     }
@@ -59,8 +58,12 @@ struct ContentView: View {
         viewMode == .day ? cachedTotalActiveTime : cachedWeeklyTotalActiveTime
     }
 
+    /// Display mode for usage data visualization
     enum ViewMode {
-        case day, week
+        /// Daily view showing single day data
+        case day
+        /// Weekly view showing aggregated week data
+        case week
     }
 
     var body: some View {
@@ -106,13 +109,13 @@ struct ContentView: View {
                     }
                     
                     // Login Items Permission Banner
-                    if loginItemPermissionDenied {
+                    if loginItemManager.permissionDenied {
                         PermissionBannerView(
                             title: "Login Items Permission Required",
                             message: "SimplyTrack needs permission to start automatically. Enable it in Login Items settings.",
                             primaryButtonTitle: "Open Login Items Settings",
-                            primaryAction: { openLoginItemsSettings() },
-                            dismissAction: { loginItemPermissionDenied = false },
+                            primaryAction: { loginItemManager.openLoginItemsSettings() },
+                            dismissAction: { loginItemManager.permissionDenied = false },
                             color: .orange
                         )
                     }
@@ -186,6 +189,9 @@ struct ContentView: View {
         } message: {
             Text("This will permanently delete all tracking data for the selected \(viewMode == .day ? "day" : "week"). This action cannot be undone.")
         }
+        .onReceive(appDelegate.$selectedDate) { newDate in
+            selectedDate = newDate
+        }
     }
 
     private var headerView: some View {
@@ -251,7 +257,6 @@ struct ContentView: View {
             Spacer()
 
             SettingsMenuView(
-                loginItemPermissionDenied: $loginItemPermissionDenied,
                 viewMode: viewMode,
                 showingClearDataConfirmation: $showingClearDataConfirmation
             )
@@ -569,11 +574,6 @@ struct ContentView: View {
         selectedDate = Date()
     }
     
-    private func openLoginItemsSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension") {
-            NSWorkspace.shared.open(url)
-        }
-    }
     
     private func openNotificationSettings() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.notifications") {

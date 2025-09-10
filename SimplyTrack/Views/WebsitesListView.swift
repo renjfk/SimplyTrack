@@ -7,8 +7,13 @@
 
 import SwiftUI
 
+/// Displays a list of websites with usage statistics and favicons.
+/// Supports expandable/collapsible view with animated transitions.
+/// Shows top websites sorted by usage time with formatted durations.
 struct WebsitesListView: View {
+    /// Array of website data sorted by usage time
     let websites: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)]
+    /// Controls whether to show all websites or just top 5
     @Binding var showAllWebsites: Bool
     
     private var displayedWebsites: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)] {

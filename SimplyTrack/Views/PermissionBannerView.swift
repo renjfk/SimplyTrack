@@ -7,14 +7,31 @@
 
 import SwiftUI
 
+/// Displays informational banners for permission requests and error states.
+/// Provides consistent styling for system permission prompts and error notifications.
+/// Supports customizable colors, dismissal actions, and primary action buttons.
 struct PermissionBannerView: View {
+    /// Banner title text
     let title: String
+    /// Detailed message text
     let message: String
+    /// Title for the primary action button
     let primaryButtonTitle: String
+    /// Primary action to perform when button is tapped
     let primaryAction: () -> Void
+    /// Optional dismiss action for closeable banners
     let dismissAction: (() -> Void)?
+    /// Accent color for the banner (affects border, background, and icon)
     let color: Color
     
+    /// Creates a permission banner with specified content and styling
+    /// - Parameters:
+    ///   - title: Banner title text
+    ///   - message: Detailed explanatory message
+    ///   - primaryButtonTitle: Text for primary action button
+    ///   - primaryAction: Action to perform when primary button is tapped
+    ///   - dismissAction: Optional action for dismissing banner
+    ///   - color: Accent color for styling (default: red)
     init(
         title: String,
         message: String,

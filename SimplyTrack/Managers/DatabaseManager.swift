@@ -8,12 +8,17 @@
 import Foundation
 import SwiftData
 
+/// Manages the SwiftData model container and database configuration for the application.
+/// Provides environment separation with different database files for debug and release builds.
+/// Serves as the central point for database access throughout the app.
 class DatabaseManager {
+    /// Shared singleton instance for database operations
     static let shared = DatabaseManager()
     
     private init() {}
     
-    // Shared ModelContainer for the entire app
+    /// SwiftData model container configured for the current environment.
+    /// Debug builds use a separate database file to avoid conflicts with release data.
     lazy var modelContainer: ModelContainer = {
         do {
             #if DEBUG
