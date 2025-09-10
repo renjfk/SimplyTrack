@@ -11,9 +11,14 @@
 A simple, elegant macOS productivity tracking app that helps you monitor your application and website usage patterns.
 
 ![Demo Video](https://github.com/user-attachments/assets/f6a87477-df34-4151-8bb4-3e2a24addc2c)
-![Screenshot 1](Screenshots/Screenshot_1.png)
-![Screenshot 2](Screenshots/Screenshot_2.png)
-![Screenshot 3](Screenshots/Screenshot_3.png)
+
+| Daily Activity View with Bar Chart | Daily Activity View with Pie Chart |
+|:---:|:---:|
+| ![Daily Activity View](Screenshots/Screenshot_1.png) | ![Daily Pie Chart View](Screenshots/Screenshot_2.png) |
+
+| Weekly Activity Overview | AI-Powered Usage Summary Notifications |
+|:---:|:---:|
+| ![Weekly Activity View](Screenshots/Screenshot_3.png) | ![Usage Summary Notification 1](Screenshots/Screenshot_4.png)<br>![Usage Summary Notification 2](Screenshots/Screenshot_5.png) |
 
 ## Motivation
 
@@ -34,9 +39,10 @@ insights without the bloat.
 
 - **📊 App & Website Tracking** - Monitor time spent in applications and websites
 - **📈 Visual Analytics** - Charts showing daily/weekly activity patterns
-- **🔒 Privacy-First** - All data stored locally, no cloud sync
+- **🔔 Smart Notifications** - Optional AI-powered daily summary notifications with usage insights
+- **🔒 Privacy-First** - All data stored locally, secure keychain storage for API keys
 - **🚀 Menu Bar Interface** - Clean popover UI, native macOS integration
-- **⚡ Smart Detection** - Automatic idle detection and session management
+- **🔍 Smart Detection** - Automatic idle detection and session management
 
 ## 🛠️ Installation
 

@@ -8,18 +8,31 @@
 import Foundation
 import SwiftData
 
+/// Configuration parameters for mock data generation during development.
+/// Controls timing, duration, and exclusion patterns for realistic test data.
 struct MockDataConfig {
+    /// Hour when work day begins (0-23)
     let startHour: Int
+    /// Hour when work day ends (0-23)
     let endHour: Int
-    let minWorkingPeriod: TimeInterval    // Minimum continuous working time
-    let maxWorkingPeriod: TimeInterval    // Maximum continuous working time
-    let minIdlePeriod: TimeInterval       // Minimum idle time between work periods
-    let maxIdlePeriod: TimeInterval       // Maximum idle time between work periods
-    let minSessionDuration: TimeInterval  // Minimum individual session duration
-    let maxSessionDuration: TimeInterval  // Maximum individual session duration
-    let excludedAppIdentifiers: Set<String>  // App identifiers to exclude from generation
-    let excludedWebsites: Set<String>        // Website domains to exclude from generation
+    /// Minimum continuous working time in seconds
+    let minWorkingPeriod: TimeInterval
+    /// Maximum continuous working time in seconds
+    let maxWorkingPeriod: TimeInterval
+    /// Minimum idle time between work periods in seconds
+    let minIdlePeriod: TimeInterval
+    /// Maximum idle time between work periods in seconds
+    let maxIdlePeriod: TimeInterval
+    /// Minimum individual session duration in seconds
+    let minSessionDuration: TimeInterval
+    /// Maximum individual session duration in seconds
+    let maxSessionDuration: TimeInterval
+    /// App bundle identifiers to exclude from mock data generation
+    let excludedAppIdentifiers: Set<String>
+    /// Website domains to exclude from mock data generation
+    let excludedWebsites: Set<String>
     
+    /// Default mock data configuration for standard development testing
     static let `default` = MockDataConfig(
         startHour: 9,
         endHour: 18,
@@ -33,6 +46,7 @@ struct MockDataConfig {
         excludedWebsites: []
     )
     
+    /// Intense work pattern configuration for heavy usage testing
     static let intense = MockDataConfig(
         startHour: 8,
         endHour: 22,
@@ -46,6 +60,7 @@ struct MockDataConfig {
         excludedWebsites: []
     )
     
+    /// Casual work pattern configuration for light usage testing
     static let casual = MockDataConfig(
         startHour: 10,
         endHour: 16,
@@ -186,8 +201,17 @@ struct MockDataConfig {
     }
 }
 
+/// Development utility for generating realistic mock usage data for testing.
+/// Creates app and website usage sessions with configurable patterns and timing.
+/// Used during development to test UI, analytics, and data processing features.
 class MockDataGenerator {
     
+    /// Generates mock usage data for a specific date using configurable patterns
+    /// - Parameters:
+    ///   - date: Target date to generate data for
+    ///   - modelContext: SwiftData context for database operations
+    ///   - config: Configuration controlling generation patterns
+    ///   - sampleFromDate: Date to sample real session patterns from
     static func populateWithMockData(for date: Date, modelContext: ModelContext, config: MockDataConfig = .default, sampleFromDate: Date) {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: date)

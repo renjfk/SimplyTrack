@@ -8,16 +8,27 @@
 import Foundation
 import AppKit
 
+/// Status of macOS system permissions required for app functionality.
+/// Used to track automation permissions needed for browser integration.
 enum PermissionStatus {
+    /// Permission has been granted by the user
     case granted
+    /// Permission has been explicitly denied by the user
     case denied
+    /// Permission status has not yet been determined
     case notDetermined
 }
 
+/// Manages macOS system permissions required for browser automation and website tracking.
+/// Monitors AppleScript automation permissions and provides UI feedback for permission states.
+/// Coordinates with WebTrackingService to handle browser communication errors.
 class PermissionManager: ObservableObject {
+    /// Shared singleton instance for permission management
     static let shared = PermissionManager()
     
+    /// Current status of automation permissions for browser AppleScript access
     @Published var automationPermissionStatus: PermissionStatus = .notDetermined
+    /// Most recent error message from browser communication attempts
     @Published var lastError: String? = nil
     
     private let supportedBrowserBundleIds = [
@@ -33,6 +44,9 @@ class PermissionManager: ObservableObject {
         // Don't check permissions on init - let background tracking handle it
     }
     
+    /// Updates permission status based on browser AppleScript execution results.
+    /// Called by WebTrackingService when AppleScript operations succeed or fail.
+    /// - Parameter success: Whether the AppleScript operation was successful
     func handleBrowserPermissionResult(success: Bool) {
         Task { @MainActor in
             if success {
@@ -43,26 +57,32 @@ class PermissionManager: ObservableObject {
         }
     }
     
+    /// Opens System Preferences to the Automation privacy settings.
+    /// Allows users to grant AppleScript permissions for browser automation.
     func openSystemPreferences() {
         // Open Security & Privacy > Privacy > Automation in System Preferences
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation")!
         NSWorkspace.shared.open(url)
     }
     
+    /// Determines if website tracking is currently possible.
+    /// - Returns: True if automation permissions are granted
     func canTrackWebsites() -> Bool {
         return automationPermissionStatus == .granted
     }
     
+    /// Records browser communication errors for UI display.
+    /// - Parameter errorMessage: Description of the browser communication error
     func handleBrowserError(_ errorMessage: String) {
         Task { @MainActor in
             self.lastError = errorMessage
         }
     }
     
+    /// Clears the current error message from the UI state.
     func clearError() {
         Task { @MainActor in
             self.lastError = nil
         }
     }
-    
 }

@@ -8,13 +8,21 @@
 import SwiftUI
 import AppKit
 
+/// Displays app and website icons with fallback generation for missing icons.
+/// Supports both cached icon data and automatic letter-based fallback icons.
+/// Applies appropriate styling (rounded rectangle for apps, circle for websites).
 struct IconView: View {
+    /// Type of icon to display with associated data
     enum IconType {
+        /// Application icon with bundle identifier and optional cached data
         case app(identifier: String, iconData: Data?)
+        /// Website icon with domain and optional favicon data
         case website(domain: String, iconData: Data?)
     }
     
+    /// Type of icon to display
     let type: IconType
+    /// Size of the icon in points
     let size: CGFloat
     
     private var icon: NSImage? {
@@ -27,6 +35,10 @@ struct IconView: View {
         }
     }
     
+    /// Creates an icon view with specified type and size
+    /// - Parameters:
+    ///   - type: Icon type (app or website) with associated data
+    ///   - size: Icon size in points (default: 25)
     init(type: IconType, size: CGFloat = 25) {
         self.type = type
         self.size = size
@@ -129,9 +141,12 @@ struct IconView: View {
     }
 }
 
+/// Type-erased shape wrapper for dynamic shape selection
 struct AnyShape: Shape {
     private let _path: @Sendable (CGRect) -> Path
     
+    /// Creates type-erased shape from any concrete shape
+    /// - Parameter shape: Concrete shape to wrap
     init<S: Shape>(_ shape: S) {
         _path = { rect in
             shape.path(in: rect)

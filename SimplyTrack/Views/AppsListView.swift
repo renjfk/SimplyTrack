@@ -7,8 +7,13 @@
 
 import SwiftUI
 
+/// Displays a list of applications with usage statistics and icons.
+/// Supports expandable/collapsible view with animated transitions.
+/// Shows top applications sorted by usage time with formatted durations.
 struct AppsListView: View {
+    /// Array of application data sorted by usage time
     let apps: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)]
+    /// Controls whether to show all apps or just top 5
     @Binding var showAllApps: Bool
     
     private var displayedApps: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)] {

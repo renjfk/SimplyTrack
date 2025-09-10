@@ -9,7 +9,10 @@ import Foundation
 import AppKit
 import UserNotifications
 import CryptoKit
+import SwiftUI
 
+/// Constants for update notification identifiers and categories.
+/// Used by UpdateManager and NotificationService for coordinating update notifications.
 struct NotificationConstants {
     static let updateCategoryIdentifier = "UPDATE_AVAILABLE"
     static let installActionIdentifier = "INSTALL_UPDATE"
@@ -17,6 +20,17 @@ struct NotificationConstants {
     static let updateNotificationIdentifier = "update-available"
 }
 
+/// User-configurable frequency for checking software updates.
+/// Determines how often the app checks GitHub releases for new versions.
+enum UpdateFrequency: String, CaseIterable, RawRepresentable {
+    case daily = "Daily"
+    case weekly = "Weekly" 
+    case monthly = "Monthly"
+    case never = "Never"
+}
+
+/// GitHub API response structure for release information.
+/// Contains version details, release notes, and downloadable assets.
 struct GitHubRelease: Codable {
     let tagName: String
     let name: String
@@ -33,6 +47,8 @@ struct GitHubRelease: Codable {
     }
 }
 
+/// Individual downloadable file within a GitHub release.
+/// Represents DMG installers, checksums, and other release artifacts.
 struct GitHubAsset: Codable {
     let name: String
     let browserDownloadUrl: String
@@ -45,6 +61,8 @@ struct GitHubAsset: Codable {
     }
 }
 
+/// Errors that can occur during the update check and installation process.
+/// Covers network issues, file validation, and installation failures.
 enum UpdateError: LocalizedError {
     case noInternetConnection
     case invalidResponse
@@ -86,6 +104,9 @@ enum UpdateError: LocalizedError {
     }
 }
 
+/// Manages software updates by checking GitHub releases and handling installations.
+/// Provides automatic update checking, secure download validation, and user notifications.
+/// Integrates with the notification system to inform users of available updates.
 @MainActor
 class UpdateManager: ObservableObject {
     static let shared = UpdateManager()
@@ -93,7 +114,9 @@ class UpdateManager: ObservableObject {
     private var isCheckingForUpdates = false
     private var isDownloadingInstaller = false
     private var availableUpdate: GitHubRelease?
-    private var lastUpdateCheck: Date?
+    
+    @AppStorage("updateFrequency", store: .app) private var updateFrequency: UpdateFrequency = .daily
+    @AppStorage("lastUpdateCheck", store: .app) private var lastUpdateCheck: Double = 0
     
     private let githubAPIURL = "https://api.github.com/repos/renjfk/SimplyTrack/releases/latest"
     
@@ -128,12 +151,30 @@ class UpdateManager: ObservableObject {
         return (output: output, error: error, status: task.terminationStatus)
     }
     
+    /// Gets the current app version from the bundle info.
+    /// - Returns: Version string from CFBundleShortVersionString, "0.0" if not found
     func getCurrentVersion() -> String {
         return Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0"
     }
     
-    func checkForUpdates(showNotification: Bool = false) async throws -> Bool {
+    /// Gets the user's configured update check frequency.
+    /// - Returns: Current update frequency setting
+    func getUpdateFrequency() -> UpdateFrequency {
+        return updateFrequency
+    }
+    
+    /// Checks for available updates from GitHub releases.
+    /// Respects user's frequency settings and prevents duplicate notifications.
+    /// - Parameter ignoreLastUpdate: Whether to bypass frequency throttling
+    /// - Returns: True if an update is available, false otherwise
+    /// - Throws: UpdateError for network or parsing failures
+    func checkForUpdates(ignoreLastUpdate: Bool = false) async throws -> Bool {
         guard !isCheckingForUpdates && !isDownloadingInstaller else {
+            return availableUpdate != nil
+        }
+        
+        // Check if we should skip based on frequency setting
+        if !ignoreLastUpdate && !shouldCheckForUpdates() {
             return availableUpdate != nil
         }
         
@@ -142,16 +183,16 @@ class UpdateManager: ObservableObject {
         
         do {
             let release = try await fetchLatestRelease()
-            lastUpdateCheck = Date()
             
             let currentVersion = getCurrentVersion()
             let latestVersion = cleanVersionString(release.tagName)
             
+            // Only update timestamp after successful check
+            lastUpdateCheck = Date().timeIntervalSince1970
+            
             if isNewerVersion(latestVersion, than: currentVersion) {
                 availableUpdate = release
-                if showNotification {
-                    try await showUpdateNotification()
-                }
+                try await showUpdateNotification()
                 return true
             } else {
                 availableUpdate = nil
@@ -178,6 +219,30 @@ class UpdateManager: ObservableObject {
         
         try await UNUserNotificationCenter.current().add(request)
     }
+    
+    private func shouldCheckForUpdates() -> Bool {
+        // Never check if frequency is set to never
+        guard updateFrequency != .never else { return false }
+        
+        // Always check if no previous check
+        guard lastUpdateCheck > 0 else { return true }
+        
+        let now = Date()
+        let lastCheckDate = Date(timeIntervalSince1970: lastUpdateCheck)
+        let timeSinceLastCheck = now.timeIntervalSince(lastCheckDate)
+        
+        switch updateFrequency {
+        case .daily:
+            return timeSinceLastCheck >= 24 * 60 * 60 // 24 hours
+        case .weekly:
+            return timeSinceLastCheck >= 7 * 24 * 60 * 60 // 7 days
+        case .monthly:
+            return timeSinceLastCheck >= 30 * 24 * 60 * 60 // 30 days
+        case .never:
+            return false
+        }
+    }
+    
     
     private func fetchLatestRelease() async throws -> GitHubRelease {
         guard let url = URL(string: githubAPIURL) else {
@@ -219,6 +284,9 @@ class UpdateManager: ObservableObject {
         return false
     }
     
+    /// Downloads the update installer and opens it for user installation.
+    /// Validates checksums for security and terminates the app to allow installation.
+    /// - Throws: UpdateError for download, validation, or file system failures
     func downloadAndOpenInstaller() async throws {
         guard !isCheckingForUpdates && !isDownloadingInstaller else {
             return
@@ -337,5 +405,4 @@ class UpdateManager: ObservableObject {
             throw UpdateError.checksumValidationFailed
         }
     }
-    
 }

@@ -8,14 +8,25 @@
 import SwiftUI
 import Charts
 
+/// Displays active time visualizations using charts and timelines.
+/// Supports both daily and weekly views with multiple chart types (timeline, bar, pie).
+/// Shows work periods, daily breakdowns, and top application usage patterns.
 struct ActiveTimeView: View {
+    /// Current display mode (daily or weekly)
     let viewMode: ContentView.ViewMode
+    /// Selected date for data display
     let selectedDate: Date
+    /// Cached work periods for timeline visualization
     let cachedWorkPeriods: [(startTime: Date, endTime: Date, duration: TimeInterval)]
+    /// Cached weekly activity breakdown by day
     let cachedWeeklyActivity: [String: TimeInterval]
+    /// Total active time for the current period
     let totalActiveTime: TimeInterval
+    /// Top applications for daily pie chart
     let topApps: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)]
+    /// Top applications for weekly pie chart
     let weeklyTopApps: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)]
+    /// Current chart page (0: timeline/bar, 1: pie chart)
     @Binding var currentPage: Int
     
     var body: some View {

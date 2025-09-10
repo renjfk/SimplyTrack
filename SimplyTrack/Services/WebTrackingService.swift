@@ -1,8 +1,9 @@
 //
-//  WebTracker.swift
+//  WebTrackingService.swift
 //  SimplyTrack
 //
-//  Created by Soner Köksal on 02.09.2025.
+//  Handles browser integration, AppleScript execution, favicon fetching, and website detection
+//  Supports Safari, Chrome, and Edge through AppleScript communication for website tracking
 //
 
 import Foundation
@@ -13,18 +14,23 @@ import os.log
 actor FaviconCacheActor {
     private var cache: [String: Data] = [:]
     
+    /// Retrieves cached favicon data for a domain.
+    /// - Parameter key: Domain name used as cache key
+    /// - Returns: Cached favicon data if available, nil otherwise
     func get(_ key: String) -> Data? {
         return cache[key]
     }
     
+    /// Stores favicon data in the cache for a domain.
+    /// - Parameters:
+    ///   - key: Domain name to use as cache key
+    ///   - value: Favicon data to cache
     func set(_ key: String, _ value: Data) {
         cache[key] = value
     }
 }
 
-class WebTracker {
-    static let shared = WebTracker()
-    
+class WebTrackingService {
     private let supportedBrowsers = [
         "com.apple.Safari": "Safari",
         "com.google.Chrome": "Chrome", 
@@ -33,12 +39,19 @@ class WebTracker {
     
     private let faviconCacheActor = FaviconCacheActor()
     
-    private init() {}
+    init() {}
     
+    // MARK: - Public Interface
+    
+    /// Gets the current website URL from the frontmost supported browser.
+    /// - Returns: Current website URL if a supported browser is active, nil otherwise
     func getCurrentWebsite() -> String? {
         return getCurrentWebsiteWithBrowser()?.url
     }
     
+    /// Gets the current website domain and favicon data from the frontmost supported browser.
+    /// Downloads and caches favicon if not already available.
+    /// - Returns: Tuple containing domain and favicon data, nil if no website detected
     func getCurrentWebsiteData() async -> (domain: String, iconData: Data?)? {
         guard let websiteInfo = getCurrentWebsiteWithBrowser() else {
             return nil
@@ -51,6 +64,9 @@ class WebTracker {
         return (domain: domain, iconData: iconData)
     }
     
+    /// Gets the current website URL along with the browser bundle identifier.
+    /// Only works with frontmost applications that are supported browsers.
+    /// - Returns: Tuple containing URL and browser bundle ID, nil if unsupported browser or no URL
     func getCurrentWebsiteWithBrowser() -> (url: String, browserBundleId: String)? {
         guard let frontmostApp = NSWorkspace.shared.frontmostApplication,
               let bundleId = frontmostApp.bundleIdentifier,
@@ -73,6 +89,8 @@ class WebTracker {
         guard let validUrl = url else { return nil }
         return (url: validUrl, browserBundleId: bundleId)
     }
+    
+    // MARK: - Browser-Specific URL Detection
     
     private func getSafariURL() -> String? {
         let script = """
@@ -110,7 +128,7 @@ class WebTracker {
         return executeAppleScript(script)
     }
     
-    
+    // MARK: - AppleScript Execution
     
     private func executeAppleScript(_ script: String) -> String? {
         var error: NSDictionary?
@@ -141,6 +159,8 @@ class WebTracker {
         return result?.stringValue
     }
     
+    // MARK: - Accessibility API Fallback
+    
     private func getURLViaAccessibility(bundleId: String) -> String? {
         guard let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == bundleId }),
               let pid = app.processIdentifier as pid_t? else {
@@ -165,6 +185,8 @@ class WebTracker {
         // This is a simplified approach - a full implementation would need more complex UI traversal
         return nil
     }
+    
+    // MARK: - URL Processing
     
     private func extractDomain(from urlString: String) -> String {
         // Only track HTTP and HTTPS URLs
