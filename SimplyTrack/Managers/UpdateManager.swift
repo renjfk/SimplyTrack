@@ -119,6 +119,7 @@ class UpdateManager: ObservableObject {
     @AppStorage("lastUpdateCheck", store: .app) private var lastUpdateCheck: Double = 0
     
     private let githubAPIURL = "https://api.github.com/repos/renjfk/SimplyTrack/releases/latest"
+    private let githubAllReleasesURL = "https://api.github.com/repos/renjfk/SimplyTrack/releases"
     
     private init() {}
     
@@ -258,6 +259,120 @@ class UpdateManager: ObservableObject {
         
         let release = try JSONDecoder().decode(GitHubRelease.self, from: data)
         return release
+    }
+    
+    /// Fetches release notes for all versions between the last launched version and current version.
+    /// - Parameters:
+    ///   - lastVersion: The version that was last launched (empty string for first launch)
+    ///   - currentVersion: The current app version
+    /// - Returns: Combined release notes content and version range string, or nil if no releases found
+    /// - Throws: UpdateError for network or parsing failures
+    func fetchReleaseNotesSince(lastVersion: String, currentVersion: String) async throws -> (content: String, versionRange: String)? {
+        guard let url = URL(string: githubAllReleasesURL) else {
+            throw UpdateError.invalidResponse
+        }
+        
+        let (data, response) = try await URLSession.shared.data(from: url)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw UpdateError.invalidResponse
+        }
+        
+        let releases = try JSONDecoder().decode([GitHubRelease].self, from: data)
+        
+        // Filter releases between lastVersion and currentVersion
+        let relevantReleases = filterReleasesBetweenVersions(
+            releases: releases,
+            fromVersion: lastVersion,
+            toVersion: currentVersion
+        )
+        
+        guard !relevantReleases.isEmpty else {
+            return nil
+        }
+        
+        // Combine release notes from all relevant versions
+        let combinedContent = combineReleaseNotes(releases: relevantReleases)
+        let versionRange = createVersionRange(releases: relevantReleases, currentVersion: currentVersion)
+        
+        return (content: combinedContent, versionRange: versionRange)
+    }
+    
+    private func filterReleasesBetweenVersions(releases: [GitHubRelease], fromVersion: String, toVersion: String) -> [GitHubRelease] {
+        let cleanToVersion = cleanVersionString(toVersion)
+        let cleanFromVersion = fromVersion.isEmpty ? "" : cleanVersionString(fromVersion)
+        
+        return releases.filter { release in
+            let releaseVersion = cleanVersionString(release.tagName)
+            
+            // Always include the current version
+            if releaseVersion == cleanToVersion {
+                return true
+            }
+            
+            // If no previous version, include all older releases
+            if fromVersion.isEmpty {
+                return isNewerVersion(cleanToVersion, than: releaseVersion)
+            }
+            
+            // Include releases newer than fromVersion but older than toVersion
+            return isNewerVersion(releaseVersion, than: cleanFromVersion) && 
+                   !isNewerVersion(releaseVersion, than: cleanToVersion)
+        }
+    }
+    
+    private func combineReleaseNotes(releases: [GitHubRelease]) -> String {
+        // Sort releases by version in descending order (newest first)
+        let sortedReleases = releases.sorted { release1, release2 in
+            let version1 = cleanVersionString(release1.tagName)
+            let version2 = cleanVersionString(release2.tagName)
+            return isNewerVersion(version1, than: version2)
+        }
+        
+        var combinedContent = ""
+        
+        for release in sortedReleases {
+            let version = cleanVersionString(release.tagName)
+            let publishDate = formatPublishDate(release.publishedAt)
+            
+            combinedContent += "## \(release.name.isEmpty ? "Version \(version)" : release.name)\n"
+            if !publishDate.isEmpty {
+                combinedContent += "*Released: \(publishDate)*\n\n"
+            }
+            combinedContent += "\(release.body)\n\n"
+        }
+        
+        return combinedContent.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    private func createVersionRange(releases: [GitHubRelease], currentVersion: String) -> String {
+        guard !releases.isEmpty else { return currentVersion }
+        
+        if releases.count == 1 {
+            return cleanVersionString(releases[0].tagName)
+        }
+        
+        let versions = releases.map { cleanVersionString($0.tagName) }
+        let sortedVersions = versions.sorted { isNewerVersion($1, than: $0) } // oldest first
+        
+        if let oldest = sortedVersions.first, let newest = sortedVersions.last {
+            return "\(oldest) - \(newest)"
+        }
+        
+        return currentVersion
+    }
+    
+    private func formatPublishDate(_ dateString: String) -> String {
+        let isoFormatter = ISO8601DateFormatter()
+        guard let date = isoFormatter.date(from: dateString) else {
+            return ""
+        }
+        
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
     }
     
     private func cleanVersionString(_ version: String) -> String {

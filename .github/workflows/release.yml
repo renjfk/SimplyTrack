@@ -305,7 +305,7 @@ jobs:
           echo "Using app bundle: $APP_PATH"
           
           # Create appdmg configuration from template
-          sed "s|{{TITLE}}|SimplyTrack $VERSION|g; s|{{APP_PATH}}|$APP_PATH|g; s|{{CERT_IDENTITY}}|$CERT_IDENTITY|g" appdmg.template.json > appdmg_temp.json
+          sed "s|{{TITLE}}|SimplyTrack v$VERSION|g; s|{{APP_PATH}}|$APP_PATH|g; s|{{CERT_IDENTITY}}|$CERT_IDENTITY|g" appdmg.template.json > appdmg_temp.json
           
           # Create signed DMG using appdmg (no temp directory needed)
           appdmg appdmg_temp.json "SimplyTrack-$VERSION.dmg"

@@ -31,7 +31,6 @@ struct SettingsMenuView: View {
             SettingsLink {
                 Text("Preferences...")
             }
-            .keyboardShortcut(",", modifiers: .command)
             
             Divider()
             
