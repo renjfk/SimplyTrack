@@ -42,6 +42,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     @AppStorage("summaryNotificationTime", store: .app) private var summaryNotificationTime: Double = AppStorageDefaults.summaryNotificationTime
     @AppStorage("lastDailySummaryNotification", store: .app) private var lastDailySummaryNotification: Double = 0
     
+    // MARK: - Release Notes Tracking
+    
+    @AppStorage("lastLaunchedVersion", store: .app) private var lastLaunchedVersion = ""
+    @AppStorage("releaseNotesDisabled", store: .app) private var releaseNotesDisabled = false
+    private var releaseNotesWindow: NSWindow?
+    private var releaseNotesContent = ""
+    private var releaseNotesVersionRange = ""
+    
     // MARK: - Application Lifecycle
     
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -59,6 +67,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         // Start background update checking
         Task {
             await startUpdateScheduler()
+        }
+        
+        // Check if app version changed and show release notes if needed
+        Task {
+            await checkAndShowReleaseNotes()
         }
     }
     
@@ -148,4 +161,102 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         menuBarManager?.togglePopover()
     }
     
+    // MARK: - Release Notes
+    
+    /// Checks if the app version has changed since last launch and shows release notes if needed.
+    /// Fetches release notes from GitHub for all versions between last launch and current version.
+    private func checkAndShowReleaseNotes() async {
+        let currentVersion = await MainActor.run {
+            UpdateManager.shared.getCurrentVersion()
+        }
+        
+        // Skip if user has disabled release notes entirely
+        guard !releaseNotesDisabled else {
+            lastLaunchedVersion = currentVersion
+            return
+        }
+        
+        // Check if version has changed since last launch
+        guard currentVersion != lastLaunchedVersion else {
+            return // Same version, no need to show release notes
+        }
+        
+        do {
+            // Fetch release notes for versions between last and current  
+            let releaseData = try await UpdateManager.shared.fetchReleaseNotesSince(
+                lastVersion: lastLaunchedVersion,
+                currentVersion: currentVersion
+            )
+            
+            if let releaseData = releaseData, !releaseData.content.isEmpty {
+                await MainActor.run {
+                    self.releaseNotesContent = releaseData.content
+                    self.releaseNotesVersionRange = releaseData.versionRange
+                    self.showReleaseNotesWindow()
+                }
+            }
+            
+            // Update the last launched version
+            lastLaunchedVersion = currentVersion
+            
+        } catch {
+            // Silently fail if GitHub API is unavailable - don't show release notes
+            logger.error("Failed to fetch release notes: \(error.localizedDescription)")
+            
+            // Still update the last launched version to avoid repeated attempts
+            lastLaunchedVersion = currentVersion
+        }
+    }
+    
+    /// Shows the release notes in an independent window that can appear even when popover is hidden.
+    @MainActor private func showReleaseNotesWindow() {
+        // Get current version before creating the view
+        let currentVersion = UpdateManager.shared.getCurrentVersion()
+        logger.info("\(self.releaseNotesContent)")
+        // Create the release notes view
+        let releaseNotesView = ReleaseNotesWindowView(
+            releaseNotesContent: releaseNotesContent,
+            versionRange: releaseNotesVersionRange,
+            onClose: { [weak self] neverShowAgain in
+                if neverShowAgain {
+                    // User never wants to see release notes, disable and update version
+                    UserDefaults.app.set(true, forKey: "releaseNotesDisabled")
+                }
+                // Always update last launched version when user closes (viewed the notes)
+                self?.lastLaunchedVersion = currentVersion
+                self?.releaseNotesWindow?.close()
+                self?.releaseNotesWindow = nil
+            }
+        )
+        
+        // Create the hosting controller
+        let hostingController = NSHostingController(rootView: releaseNotesView)
+        
+        // Create the window
+        releaseNotesWindow = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 500, height: 600),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        
+        releaseNotesWindow?.title = "What's New in SimplyTrack"
+        releaseNotesWindow?.contentViewController = hostingController
+        releaseNotesWindow?.isReleasedWhenClosed = false
+        releaseNotesWindow?.level = .floating
+        
+        // Make the window visible first so it has proper frame
+        releaseNotesWindow?.makeKeyAndOrderFront(nil)
+        
+        // Then center it after a brief delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) { [weak self] in
+            if let window = self?.releaseNotesWindow, let screen = NSScreen.main {
+                let screenFrame = screen.visibleFrame
+                let windowFrame = window.frame
+                let x = screenFrame.origin.x + (screenFrame.size.width - windowFrame.size.width) / 2
+                let y = screenFrame.origin.y + (screenFrame.size.height - windowFrame.size.height) / 2
+                window.setFrameOrigin(NSPoint(x: x, y: y))
+            }
+        }
+    }
 }

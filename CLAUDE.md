@@ -1,0 +1,1 @@
+- Never author commits with Claude Code, always use author defined on system
