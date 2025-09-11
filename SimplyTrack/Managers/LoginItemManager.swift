@@ -7,11 +7,13 @@
 
 import SwiftUI
 import ServiceManagement
+import os
 
 /// Manages the app's "Launch at Login" functionality using ServiceManagement framework.
 /// Handles registration/unregistration with macOS launch services and permission management.
 /// Provides UI state for permission denied scenarios and system preferences integration.
 class LoginItemManager: ObservableObject {
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "LoginItemManager")
     /// Shared singleton instance for login item management
     static let shared = LoginItemManager()
     
@@ -47,7 +49,7 @@ class LoginItemManager: ObservableObject {
                 return true
             }
         } catch {
-            print("Failed to toggle launch at login: \(error)")
+            logger.error("Failed to toggle launch at login: \(error.localizedDescription)")
             await MainActor.run { 
                 permissionDenied = true 
             }
