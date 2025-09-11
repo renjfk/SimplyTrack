@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftData
+import os
 
 /// Configuration parameters for mock data generation during development.
 /// Controls timing, duration, and exclusion patterns for realistic test data.
@@ -205,6 +206,7 @@ struct MockDataConfig {
 /// Creates app and website usage sessions with configurable patterns and timing.
 /// Used during development to test UI, analytics, and data processing features.
 class MockDataGenerator {
+    private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "MockDataGenerator")
     
     /// Generates mock usage data for a specific date using configurable patterns
     /// - Parameters:
@@ -230,7 +232,7 @@ class MockDataGenerator {
                 generateDataFromSample(for: startOfDay, sampleDate: sampleFromDate, config: config, modelContext: modelContext)
             }
         } catch {
-            print("Error populating mock data: \(error)")
+            logger.error("Error populating mock data: \(error.localizedDescription)")
         }
     }
     
@@ -250,7 +252,7 @@ class MockDataGenerator {
                 modelContext.delete(session)
             }
         } catch {
-            print("Error clearing existing data: \(error)")
+            logger.error("Error clearing existing data: \(error.localizedDescription)")
         }
     }
     
@@ -298,7 +300,7 @@ class MockDataGenerator {
             )
             
         } catch {
-            print("Error fetching sample data: \(error)")
+            logger.error("Error fetching sample data: \(error.localizedDescription)")
             // No fallback, skip generation if sample data can't be fetched
         }
     }

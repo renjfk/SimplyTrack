@@ -234,7 +234,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         
         // Create the window
         releaseNotesWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 500, height: 600),
+            contentRect: NSRect(x: 0, y: 0, width: 600, height: 600),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false

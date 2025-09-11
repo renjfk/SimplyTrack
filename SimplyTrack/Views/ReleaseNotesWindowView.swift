@@ -74,7 +74,7 @@ struct ReleaseNotesWindowView: View {
                 .padding()
             }
         }
-        .frame(width: 500, height: 600)
+        .frame(width: 600, height: 600)
         .background(Color(NSColor.windowBackgroundColor))
     }
     
@@ -147,6 +147,15 @@ struct ReleaseNotesWindowView: View {
 #Preview {
     ReleaseNotesWindowView(
         releaseNotesContent: """
+## v0.3
+*Released: 10 Sep 2025*
+
+### ✨ New Features
+- Add automatic release notes notifications when updates are available (84e04f3)
+
+### 🐛 Bug Fixes
+- Fix notification clicks not properly navigating to yesterday's data (5569a33)
+
 ## v0.2
 *Released: 10 Sep 2025*
 

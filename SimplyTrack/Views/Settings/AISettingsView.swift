@@ -6,10 +6,12 @@
 //
 
 import SwiftUI
+import os
 
 /// AI settings view for configuring OpenAI integration and daily summary notifications.
 /// Handles API endpoint configuration, authentication, and notification scheduling.
 struct AISettingsView: View {
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "AISettingsView")
     @AppStorage("aiEndpoint", store: .app) private var aiEndpoint = ""
     @AppStorage("aiModel", store: .app) private var aiModel = ""
     
@@ -221,7 +223,7 @@ struct AISettingsView: View {
         do {
             aiApiKey = try KeychainManager.shared.retrieve(key: "aiApiKey") ?? ""
         } catch {
-            print("Failed to load API key from keychain: \(error)")
+            logger.error("Failed to load API key from keychain: \(error.localizedDescription)")
         }
     }
     
@@ -233,7 +235,7 @@ struct AISettingsView: View {
                 try KeychainManager.shared.save(key: "aiApiKey", value: key)
             }
         } catch {
-            print("Failed to save API key to keychain: \(error)")
+            logger.error("Failed to save API key to keychain: \(error.localizedDescription)")
         }
     }
 }
