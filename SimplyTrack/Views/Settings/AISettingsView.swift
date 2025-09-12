@@ -41,21 +41,31 @@ struct AISettingsView: View {
         VStack(alignment: .leading, spacing: 0) {
             Form {
                 Section("AI Configuration") {
-                    ValidatedTextField(
-                        title: "API Endpoint",
-                        text: $aiEndpoint,
-                        placeholder: "https://api.openai.com/v1/chat/completions",
-                        helpText: "Full URL for AI API chat completions endpoint",
-                        required: summaryNotificationsEnabled,
-                        errorMessage: "Endpoint is required"
-                    )
+                    HStack(alignment: .top) {
+                        Image(systemName: "link")
+                            .foregroundColor(.blue)
+                            .frame(width: 16)
+                        ValidatedTextField(
+                            title: "API Endpoint",
+                            text: $aiEndpoint,
+                            placeholder: "https://api.openai.com/v1/chat/completions",
+                            helpText: "Full URL for AI API chat completions endpoint",
+                            required: summaryNotificationsEnabled,
+                            errorMessage: "Endpoint is required"
+                        )
+                    }
                     
                     VStack(alignment: .leading, spacing: 4) {
-                        SecureField(text: $aiApiKey, prompt: Text("sk-...")) {
-                            Text("API Key")
-                        }
-                        .onChange(of: aiApiKey) { _, newValue in
-                            saveApiKeyToKeychain(newValue)
+                        HStack(alignment: .top) {
+                            Image(systemName: "key.fill")
+                                .foregroundColor(.orange)
+                                .frame(width: 16)
+                            SecureField(text: $aiApiKey, prompt: Text("sk-...")) {
+                                Text("API Key")
+                            }
+                            .onChange(of: aiApiKey) { _, newValue in
+                                saveApiKeyToKeychain(newValue)
+                            }
                         }
                         
                         Text("Your API key (optional, stored securely in Keychain)")
@@ -63,17 +73,25 @@ struct AISettingsView: View {
                             .foregroundColor(.secondary)
                     }
                     
-                    ValidatedTextField(
-                        title: "Model",
-                        text: $aiModel,
-                        placeholder: "gpt-4",
-                        helpText: "AI model to use for features",
-                        required: summaryNotificationsEnabled,
-                        errorMessage: "Model is required"
-                    )
+                    HStack(alignment: .top) {
+                        Image(systemName: "brain")
+                            .foregroundColor(.purple)
+                            .frame(width: 16)
+                        ValidatedTextField(
+                            title: "Model",
+                            text: $aiModel,
+                            placeholder: "gpt-4",
+                            helpText: "AI model to use for features",
+                            required: summaryNotificationsEnabled,
+                            errorMessage: "Model is required"
+                        )
+                    }
                     
                     VStack(alignment: .leading, spacing: 4) {
-                        HStack {
+                        HStack(alignment: .top) {
+                            Image(systemName: "network")
+                                .foregroundColor(.green)
+                                .frame(width: 16)
                             Button("Test Connection") {
                                 Task {
                                     await testConnection()
@@ -116,7 +134,10 @@ struct AISettingsView: View {
                 
                 Section("Summary Notifications") {
                     VStack(alignment: .leading, spacing: 4) {
-                        HStack {
+                        HStack(alignment: .top) {
+                            Image(systemName: "bell.fill")
+                                .foregroundColor(.blue)
+                                .frame(width: 16)
                             Toggle("Enable summary notification", isOn: Binding(
                                 get: { summaryNotificationsEnabled && !hasValidationErrors },
                                 set: { newValue in
@@ -134,7 +155,10 @@ struct AISettingsView: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
-                        HStack {
+                        HStack(alignment: .top) {
+                            Image(systemName: "clock")
+                                .foregroundColor(.orange)
+                                .frame(width: 16)
                             Text("Notification time")
                             
                             Spacer()
@@ -153,10 +177,15 @@ struct AISettingsView: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
-                        TextField(text: $summaryNotificationPrompt, prompt: Text("Create a brief daily summary..."), axis: .vertical) {
-                            Text("Prompt")
+                        HStack(alignment: .top) {
+                            Image(systemName: "text.bubble")
+                                .foregroundColor(.purple)
+                                .frame(width: 16)
+                            TextField(text: $summaryNotificationPrompt, prompt: Text("Create a brief daily summary..."), axis: .vertical) {
+                                Text("Prompt")
+                            }
+                            .lineLimit(5...10)
                         }
-                        .lineLimit(5...10)
                         
                         if summaryNotificationsEnabled && summaryNotificationPrompt.isEmpty {
                             Text("Prompt is required")

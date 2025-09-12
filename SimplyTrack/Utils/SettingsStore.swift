@@ -29,6 +29,10 @@ Focus on key insights and productivity patterns. Make it encouraging and actiona
         let components = DateComponents(hour: 9, minute: 0)
         return calendar.date(from: components)?.timeIntervalSince1970 ?? 0
     }()
+    
+    /// Default private browsing tracking preference.
+    /// Privacy-first approach: disabled by default to protect user privacy.
+    static let trackPrivateBrowsing = false
 }
 
 /// UserDefaults extension providing environment-specific storage isolation.

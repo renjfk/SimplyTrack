@@ -7,6 +7,7 @@
 
 import Foundation
 import AppKit
+import ApplicationServices
 
 /// Status of macOS system permissions required for app functionality.
 /// Used to track automation permissions needed for browser integration.
@@ -28,6 +29,10 @@ class PermissionManager: ObservableObject {
     
     /// Current status of automation permissions for browser AppleScript access
     @Published var automationPermissionStatus: PermissionStatus = .notDetermined
+    /// Current status of System Events automation permissions (needed for Safari private browsing detection)
+    @Published var systemEventsPermissionStatus: PermissionStatus = .notDetermined
+    /// Current status of Accessibility permissions (needed for Safari private browsing detection)
+    @Published var accessibilityPermissionStatus: PermissionStatus = .notDetermined
     /// Most recent error message from browser communication attempts
     @Published var lastError: String? = nil
     
@@ -58,10 +63,17 @@ class PermissionManager: ObservableObject {
     }
     
     /// Opens System Preferences to the Automation privacy settings.
-    /// Allows users to grant AppleScript permissions for browser automation.
+    /// Allows users to grant AppleScript permissions for browser automation and System Events access.
     func openSystemPreferences() {
         // Open Security & Privacy > Privacy > Automation in System Preferences
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation")!
+        NSWorkspace.shared.open(url)
+    }
+    
+    /// Opens System Preferences to the Accessibility privacy settings.
+    /// Allows users to grant Accessibility permissions for Safari private browsing detection.
+    func openAccessibilityPreferences() {
+        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
         NSWorkspace.shared.open(url)
     }
     
@@ -84,5 +96,78 @@ class PermissionManager: ObservableObject {
         Task { @MainActor in
             self.lastError = nil
         }
+    }
+    
+    
+    // MARK: - System Events Permissions
+    
+    /// Checks System Events automation permissions by attempting to access System Events.
+    /// This tests the specific permission needed for Safari private browsing detection.
+    /// - Returns: Current System Events automation permission status
+    func checkSystemEventsPermissions() -> PermissionStatus {
+        let testScript = """
+        tell application "System Events"
+            try
+                -- Simple test to see if we can access System Events
+                return name of first process
+            on error
+                return "denied"
+            end try
+        end tell
+        """
+        
+        var error: NSDictionary?
+        let appleScript = NSAppleScript(source: testScript)
+        let result = appleScript?.executeAndReturnError(&error)
+        
+        let status: PermissionStatus
+        if let error = error {
+            let errorCode = error["NSAppleScriptErrorNumber"] as? Int ?? -1
+            // Error -1743 or -1744 typically indicate permission issues
+            status = (errorCode == -1743 || errorCode == -1744) ? .denied : .notDetermined
+        } else if let result = result, result.stringValue != "denied" {
+            status = .granted
+        } else {
+            status = .denied
+        }
+        
+        Task { @MainActor in
+            self.systemEventsPermissionStatus = status
+        }
+        
+        return status
+    }
+    
+    // MARK: - Accessibility Permissions
+    
+    /// Checks the current status of Accessibility permissions.
+    /// Required for Safari private browsing detection via UI automation.
+    /// - Returns: Current accessibility permission status
+    func checkAccessibilityPermissions() -> PermissionStatus {
+        let hasPermission = AXIsProcessTrusted()
+        let status: PermissionStatus = hasPermission ? .granted : .denied
+        
+        Task { @MainActor in
+            self.accessibilityPermissionStatus = status
+        }
+        
+        return status
+    }
+    
+    /// Requests Accessibility permissions by showing the system dialog.
+    /// This will prompt the user to grant permissions if not already granted.
+    func requestAccessibilityPermissions() {
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+        let hasPermission = AXIsProcessTrustedWithOptions(options as CFDictionary)
+        
+        Task { @MainActor in
+            self.accessibilityPermissionStatus = hasPermission ? .granted : .denied
+        }
+    }
+    
+    /// Determines if Safari private browsing detection is currently possible.
+    /// - Returns: True if both System Events and Accessibility permissions are granted
+    func canDetectSafariPrivateBrowsing() -> Bool {
+        return systemEventsPermissionStatus == .granted && accessibilityPermissionStatus == .granted
     }
 }

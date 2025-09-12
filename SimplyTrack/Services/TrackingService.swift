@@ -17,6 +17,9 @@ import os
 @MainActor
 class TrackingService {
     
+    /// Interval for persisting usage data to database and cache expiry
+    static let dataPersistenceInterval: TimeInterval = 30.0
+    
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "TrackingService")
     
     // MARK: - Dependencies
@@ -79,7 +82,7 @@ class TrackingService {
         }
         
         // Save sessions every 30 seconds for data safety
-        Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { _ in
+        Timer.scheduledTimer(withTimeInterval: Self.dataPersistenceInterval, repeats: true) { _ in
             Task { @MainActor in
                 await self.sessionPersistenceService.performAtomicSave()
             }
