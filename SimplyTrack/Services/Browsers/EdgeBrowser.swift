@@ -15,10 +15,9 @@ class EdgeBrowser: BaseBrowser {
         super.init(bundleId: "com.microsoft.edgemac", displayName: "Edge")
     }
     
-    /// Gets the current active URL from Edge.
-    /// - Returns: The current URL from the active tab, or nil if not available
-    override func getCurrentURL() -> String? {
-        let script = """
+    /// Edge-specific AppleScript for URL retrieval
+    override var currentURLScript: String {
+        return """
             tell application "Microsoft Edge"
                 if (count of windows) > 0 then
                     set currentTab to active tab of window 1
@@ -26,11 +25,11 @@ class EdgeBrowser: BaseBrowser {
                 end if
             end tell
         """
-        return executeAppleScript(script)
     }
     
     /// Checks if Edge is currently in InPrivate mode.
     /// Uses the 'mode' property similar to Chrome, since Edge is Chromium-based.
+    /// Note: Permissions are already verified by getCurrentURL() call, so no need to re-check.
     /// - Returns: true if InPrivate mode is detected, false otherwise
     override func isInPrivateBrowsingMode() -> Bool {
         let script = """
@@ -41,7 +40,9 @@ class EdgeBrowser: BaseBrowser {
             end tell
         """
         
-        guard let result = executeAppleScript(script),
+        let scriptResult = executeAppleScript(script)
+        
+        guard let result = scriptResult.result,
               let isInPrivate = Bool(result.lowercased()) else {
             return false
         }

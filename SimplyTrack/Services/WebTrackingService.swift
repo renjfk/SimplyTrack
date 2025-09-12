@@ -98,33 +98,6 @@ class WebTrackingService {
         return browsers[bundleId]
     }
     
-    // MARK: - Accessibility API Fallback
-    
-    private func getURLViaAccessibility(bundleId: String) -> String? {
-        guard let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == bundleId }),
-              let pid = app.processIdentifier as pid_t? else {
-            return nil
-        }
-        
-        let appRef = AXUIElementCreateApplication(pid)
-        var windows: CFTypeRef?
-        
-        let result = AXUIElementCopyAttributeValue(appRef, kAXWindowsAttribute as CFString, &windows)
-        guard result == .success,
-              let windowsArray = windows as? [AXUIElement],
-              !windowsArray.isEmpty else {
-            return nil
-        }
-        
-        // Try to get URL from the first window's address bar
-        let window = windowsArray[0]
-        var focused: CFTypeRef?
-        AXUIElementCopyAttributeValue(window, kAXFocusedUIElementAttribute as CFString, &focused)
-        
-        // This is a simplified approach - a full implementation would need more complex UI traversal
-        return nil
-    }
-    
     // MARK: - URL Processing
     
     private func extractDomain(from urlString: String) -> String {

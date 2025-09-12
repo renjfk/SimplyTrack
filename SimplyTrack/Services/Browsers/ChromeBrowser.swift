@@ -15,10 +15,9 @@ class ChromeBrowser: BaseBrowser {
         super.init(bundleId: "com.google.Chrome", displayName: "Chrome")
     }
     
-    /// Gets the current active URL from Chrome.
-    /// - Returns: The current URL from the active tab, or nil if not available
-    override func getCurrentURL() -> String? {
-        let script = """
+    /// Chrome-specific AppleScript for URL retrieval
+    override var currentURLScript: String {
+        return """
             tell application "Google Chrome"
                 if (count of windows) > 0 then
                     set currentTab to active tab of window 1
@@ -26,11 +25,11 @@ class ChromeBrowser: BaseBrowser {
                 end if
             end tell
         """
-        return executeAppleScript(script)
     }
     
     /// Checks if Chrome is currently in incognito mode.
     /// Uses the reliable 'mode' property available in Chrome's AppleScript interface.
+    /// Note: Permissions are already verified by getCurrentURL() call, so no need to re-check.
     /// - Returns: true if incognito mode is detected, false otherwise
     override func isInPrivateBrowsingMode() -> Bool {
         let script = """
@@ -41,7 +40,9 @@ class ChromeBrowser: BaseBrowser {
             end tell
         """
         
-        guard let result = executeAppleScript(script),
+        let scriptResult = executeAppleScript(script)
+        
+        guard let result = scriptResult.result,
               let isIncognito = Bool(result.lowercased()) else {
             return false
         }

@@ -8,6 +8,13 @@
 import Foundation
 import os.log
 
+/// Result of AppleScript execution including error information
+struct AppleScriptResult {
+    let result: String?
+    let errorCode: Int?
+    let error: NSDictionary?
+}
+
 /// Protocol defining the interface for browser-specific URL detection and private browsing detection.
 /// Provides a consistent API for interacting with different browsers through AppleScript.
 protocol BrowserInterface {
@@ -24,11 +31,6 @@ protocol BrowserInterface {
     /// Checks if the current active tab/window is in private browsing mode.
     /// - Returns: true if private browsing is detected, false otherwise
     func isInPrivateBrowsingMode() -> Bool
-    
-    /// Executes an AppleScript command for this browser.
-    /// - Parameter script: The AppleScript code to execute
-    /// - Returns: The result of the script execution, or nil if execution failed
-    func executeAppleScript(_ script: String) -> String?
 }
 
 /// Base implementation providing common AppleScript execution functionality.
@@ -39,34 +41,24 @@ class BaseBrowser: BrowserInterface {
     
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "BrowserInterface")
     
+    /// Abstract property that subclasses must provide with their specific URL retrieval AppleScript
+    var currentURLScript: String {
+        fatalError("Subclasses must implement currentURLScript")
+    }
+    
     init(bundleId: String, displayName: String) {
         self.bundleId = bundleId
         self.displayName = displayName
     }
     
-    /// Default implementation - subclasses should override
+    /// Centralized implementation that handles all browser permission errors
     func getCurrentURL() -> String? {
-        fatalError("Subclasses must implement getCurrentURL()")
-    }
-    
-    /// Default implementation - subclasses should override
-    func isInPrivateBrowsingMode() -> Bool {
-        fatalError("Subclasses must implement isInPrivateBrowsingMode()")
-    }
-    
-    /// Shared AppleScript execution logic with error handling and permission management.
-    /// - Parameter script: The AppleScript code to execute
-    /// - Returns: The result string, or nil if execution failed
-    func executeAppleScript(_ script: String) -> String? {
-        var error: NSDictionary?
-        let appleScript = NSAppleScript(source: script)
-        let result = appleScript?.executeAndReturnError(&error)
+        let scriptResult = executeAppleScript(currentURLScript)
         
-        if let error = error {
-            let errorCode = error["NSAppleScriptErrorNumber"] as? Int
-            
+        // Handle browser permission result
+        if let error = scriptResult.error {
             // Handle permission-related errors
-            if errorCode == -1743 || errorCode == -1744 {
+            if scriptResult.errorCode == -1743 || scriptResult.errorCode == -1744 {
                 PermissionManager.shared.handleBrowserPermissionResult(success: false)
             } else {
                 // Log non-permission AppleScript errors using Logger
@@ -79,10 +71,33 @@ class BaseBrowser: BrowserInterface {
         }
         
         // If we successfully executed AppleScript, permissions are working
-        if result != nil {
+        if scriptResult.result != nil {
             PermissionManager.shared.handleBrowserPermissionResult(success: true)
         }
         
-        return result?.stringValue
+        return scriptResult.result
+    }
+    
+    /// Default implementation - subclasses should override
+    func isInPrivateBrowsingMode() -> Bool {
+        fatalError("Subclasses must implement isInPrivateBrowsingMode()")
+    }
+    
+    /// Internal method for executing AppleScript and returning detailed result information.
+    /// Only available to subclasses within the same module.
+    /// - Parameter script: The AppleScript code to execute
+    /// - Returns: AppleScriptResult containing the result, error code, and error details
+    internal func executeAppleScript(_ script: String) -> AppleScriptResult {
+        var error: NSDictionary?
+        let appleScript = NSAppleScript(source: script)
+        let result = appleScript?.executeAndReturnError(&error)
+        
+        let errorCode = error?["NSAppleScriptErrorNumber"] as? Int
+        
+        return AppleScriptResult(
+            result: result?.stringValue,
+            errorCode: errorCode,
+            error: error
+        )
     }
 }

@@ -18,10 +18,9 @@ class SafariBrowser: BaseBrowser {
         super.init(bundleId: "com.apple.Safari", displayName: "Safari")
     }
     
-    /// Gets the current active URL from Safari.
-    /// - Returns: The current URL from the active tab, or nil if not available
-    override func getCurrentURL() -> String? {
-        let script = """
+    /// Safari-specific AppleScript for URL retrieval
+    override var currentURLScript: String {
+        return """
             tell application "Safari"
                 if (count of windows) > 0 then
                     set currentTab to current tab of window 1
@@ -29,40 +28,48 @@ class SafariBrowser: BaseBrowser {
                 end if
             end tell
         """
-        
-        let result = executeAppleScript(script)
-        return result
     }
     
     /// Checks if Safari is currently in private browsing mode.
     /// Uses System Events to check for private window menu item.
     /// - Returns: true if private browsing is detected, false otherwise
     override func isInPrivateBrowsingMode() -> Bool {
-        // Check if we have both System Events and Accessibility permissions
-        let hasSystemEventsPermission = PermissionManager.shared.checkSystemEventsPermissions() == .granted
+        // Check if we have Accessibility permissions first (required for System Events UI automation)
         let hasAccessibilityPermission = PermissionManager.shared.checkAccessibilityPermissions() == .granted
-        
-        if !hasSystemEventsPermission || !hasAccessibilityPermission {
+        if !hasAccessibilityPermission {
             return false
         }
         
         let systemEventsScript = """
 tell application "System Events"
   tell process "Safari"
-      try
-          set theMenuBar to menu bar 1
-          set theWindowMenu to menu "Window" of theMenuBar
-          return (menu item "Move Tab to New Private Window" of theWindowMenu) exists
-      on error errorMessage number errorNumber
-          return false
-      end try
+      set theMenuBar to menu bar 1
+      set theWindowMenu to menu "Window" of theMenuBar
+      return (menu item "Move Tab to New Private Window" of theWindowMenu) exists
   end tell
 end tell
 """
         
-        let result = executeAppleScript(systemEventsScript)
+        let scriptResult = executeAppleScript(systemEventsScript)
         
-        if let resultString = result, let isPrivate = Bool(resultString.lowercased()) {
+        // Handle System Events permission result
+        if let error = scriptResult.error {
+            // Handle permission-related errors
+            if scriptResult.errorCode == -1743 || scriptResult.errorCode == -1744 {
+                PermissionManager.shared.handleSystemEventsPermissionResult(success: false)
+            } else {
+                // Log non-permission System Events errors
+                logger.error("Safari System Events AppleScript error: \(error.description)")
+            }
+            return false
+        }
+        
+        // If we successfully executed System Events AppleScript, permissions are working
+        if scriptResult.result != nil {
+            PermissionManager.shared.handleSystemEventsPermissionResult(success: true)
+        }
+        
+        if let resultString = scriptResult.result, let isPrivate = Bool(resultString.lowercased()) {
             return isPrivate
         }
         
