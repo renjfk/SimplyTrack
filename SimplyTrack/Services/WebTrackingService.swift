@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import SwiftUI
 import AppKit
 import ApplicationServices
 
@@ -41,10 +42,8 @@ class WebTrackingService {
     
     private let faviconCacheActor = FaviconCacheActor()
     
-    // Privacy settings - accessed via UserDefaults
-    private var trackPrivateBrowsing: Bool {
-        return UserDefaults.app.bool(forKey: "trackPrivateBrowsing")
-    }
+    // Privacy settings
+    @AppStorage("trackPrivateBrowsing", store: .app) private var trackPrivateBrowsing = AppStorageDefaults.trackPrivateBrowsing
     
     init() {}
     

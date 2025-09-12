@@ -220,7 +220,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             onClose: { [weak self] neverShowAgain in
                 if neverShowAgain {
                     // User never wants to see release notes, disable and update version
-                    UserDefaults.app.set(true, forKey: "releaseNotesDisabled")
+                    self?.releaseNotesDisabled = true
                 }
                 // Always update last launched version when user closes (viewed the notes)
                 self?.lastLaunchedVersion = currentVersion
