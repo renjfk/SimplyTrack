@@ -7,6 +7,7 @@
 
 import Foundation
 import AppKit
+import ApplicationServices
 
 /// Status of macOS system permissions required for app functionality.
 /// Used to track automation permissions needed for browser integration.
@@ -28,6 +29,10 @@ class PermissionManager: ObservableObject {
     
     /// Current status of automation permissions for browser AppleScript access
     @Published var automationPermissionStatus: PermissionStatus = .notDetermined
+    /// Current status of System Events automation permissions (needed for Safari private browsing detection)
+    @Published var systemEventsPermissionStatus: PermissionStatus = .notDetermined
+    /// Current status of Accessibility permissions (needed for Safari private browsing detection)
+    @Published var accessibilityPermissionStatus: PermissionStatus = .notDetermined
     /// Most recent error message from browser communication attempts
     @Published var lastError: String? = nil
     
@@ -57,18 +62,32 @@ class PermissionManager: ObservableObject {
         }
     }
     
+    /// Updates System Events permission status based on AppleScript execution results.
+    /// Called by Safari browser when System Events operations succeed or fail.
+    /// - Parameter success: Whether the System Events AppleScript operation was successful
+    func handleSystemEventsPermissionResult(success: Bool) {
+        Task { @MainActor in
+            if success {
+                self.systemEventsPermissionStatus = .granted
+            } else {
+                self.systemEventsPermissionStatus = .denied
+            }
+        }
+    }
+    
     /// Opens System Preferences to the Automation privacy settings.
-    /// Allows users to grant AppleScript permissions for browser automation.
+    /// Allows users to grant AppleScript permissions for browser automation and System Events access.
     func openSystemPreferences() {
         // Open Security & Privacy > Privacy > Automation in System Preferences
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation")!
         NSWorkspace.shared.open(url)
     }
     
-    /// Determines if website tracking is currently possible.
-    /// - Returns: True if automation permissions are granted
-    func canTrackWebsites() -> Bool {
-        return automationPermissionStatus == .granted
+    /// Opens System Preferences to the Accessibility privacy settings.
+    /// Allows users to grant Accessibility permissions for Safari private browsing detection.
+    func openAccessibilityPreferences() {
+        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+        NSWorkspace.shared.open(url)
     }
     
     /// Records browser communication errors for UI display.
@@ -84,5 +103,23 @@ class PermissionManager: ObservableObject {
         Task { @MainActor in
             self.lastError = nil
         }
+    }
+    
+    
+    
+    // MARK: - Accessibility Permissions
+    
+    /// Checks the current status of Accessibility permissions.
+    /// Required for Safari private browsing detection via UI automation.
+    /// - Returns: Current accessibility permission status
+    func checkAccessibilityPermissions() -> PermissionStatus {
+        let hasPermission = AXIsProcessTrusted()
+        let status: PermissionStatus = hasPermission ? .granted : .denied
+        
+        Task { @MainActor in
+            self.accessibilityPermissionStatus = status
+        }
+        
+        return status
     }
 }

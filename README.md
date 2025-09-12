@@ -37,12 +37,12 @@ insights without the bloat.
 
 ## ✨ Features
 
-- **📊 App & Website Tracking** - Monitor time spent in applications and websites
+- **📊 App & Website Tracking** - Monitor time spent in applications and websites (Safari, Chrome, Edge supported)
 - **📈 Visual Analytics** - Charts showing daily/weekly activity patterns
 - **🔔 Smart Notifications** - Optional AI-powered daily summary notifications with usage insights
-- **🔒 Privacy-First** - All data stored locally, secure keychain storage for API keys
+- **🔒 Privacy-First** - All data stored locally, secure keychain storage for API keys, optional private browsing tracking
 - **🚀 Menu Bar Interface** - Clean popover UI, native macOS integration
-- **🔍 Smart Detection** - Automatic idle detection and session management
+- **🔍 Smart Detection** - Automatic idle detection, session management, and private browsing detection
 
 ## 🛠️ Installation
 
@@ -80,9 +80,17 @@ SimplyTrack requires several macOS permissions to function properly:
 
 1. **Automation Permission**: To track browser activity
     - System Preferences → Privacy & Security → Automation
-    - Enable SimplyTrack for your browsers
+    - Enable SimplyTrack for your browsers (Safari, Chrome, Edge)
 
-2. **Notifications** (Optional): For update notifications
+2. **System Events Permission**: For Safari private browsing detection
+    - System Preferences → Privacy & Security → Automation
+    - Enable SimplyTrack for System Events
+
+3. **Accessibility Permission**: For Safari private browsing detection
+    - System Preferences → Privacy & Security → Accessibility
+    - Enable SimplyTrack
+
+4. **Notifications** (Optional): For update notifications
     - System Preferences → Notifications & Focus → SimplyTrack
 
 ### Permission Setup

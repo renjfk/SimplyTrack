@@ -7,9 +7,9 @@
 //
 
 import Foundation
+import SwiftUI
 import AppKit
 import ApplicationServices
-import os.log
 
 actor FaviconCacheActor {
     private var cache: [String: Data] = [:]
@@ -31,13 +31,19 @@ actor FaviconCacheActor {
 }
 
 class WebTrackingService {
-    private let supportedBrowsers = [
-        "com.apple.Safari": "Safari",
-        "com.google.Chrome": "Chrome", 
-        "com.microsoft.edgemac": "Edge"
-    ]
+    
+    private let browsers: [String: BrowserInterface] = [
+        SafariBrowser(),
+        ChromeBrowser(),
+        EdgeBrowser()
+    ].reduce(into: [:]) { result, browser in
+        result[browser.bundleId] = browser
+    }
     
     private let faviconCacheActor = FaviconCacheActor()
+    
+    // Privacy settings
+    @AppStorage("trackPrivateBrowsing", store: .app) private var trackPrivateBrowsing = AppStorageDefaults.trackPrivateBrowsing
     
     init() {}
     
@@ -66,124 +72,31 @@ class WebTrackingService {
     
     /// Gets the current website URL along with the browser bundle identifier.
     /// Only works with frontmost applications that are supported browsers.
+    /// Respects privacy settings by filtering out private/incognito tabs when tracking is disabled.
     /// - Returns: Tuple containing URL and browser bundle ID, nil if unsupported browser or no URL
     func getCurrentWebsiteWithBrowser() -> (url: String, browserBundleId: String)? {
         guard let frontmostApp = NSWorkspace.shared.frontmostApplication,
               let bundleId = frontmostApp.bundleIdentifier,
-              supportedBrowsers.keys.contains(bundleId) else {
+              let browser = browsers[bundleId] else {
             return nil
         }
         
-        let url: String?
-        switch bundleId {
-        case "com.apple.Safari":
-            url = getSafariURL()
-        case "com.google.Chrome":
-            url = getChromeURL()
-        case "com.microsoft.edgemac":
-            url = getEdgeURL()
-        default:
-            url = nil
-        }
-        
-        guard let validUrl = url else { return nil }
-        return (url: validUrl, browserBundleId: bundleId)
-    }
-    
-    // MARK: - Browser-Specific URL Detection
-    
-    private func getSafariURL() -> String? {
-        let script = """
-            tell application "Safari"
-                if (count of windows) > 0 then
-                    set currentTab to current tab of window 1
-                    return URL of currentTab
-                end if
-            end tell
-        """
-        return executeAppleScript(script)
-    }
-    
-    private func getChromeURL() -> String? {
-        let script = """
-            tell application "Google Chrome"
-                if (count of windows) > 0 then
-                    set currentTab to active tab of window 1
-                    return URL of currentTab
-                end if
-            end tell
-        """
-        return executeAppleScript(script)
-    }
-    
-    private func getEdgeURL() -> String? {
-        let script = """
-            tell application "Microsoft Edge"
-                if (count of windows) > 0 then
-                    set currentTab to active tab of window 1
-                    return URL of currentTab
-                end if
-            end tell
-        """
-        return executeAppleScript(script)
-    }
-    
-    // MARK: - AppleScript Execution
-    
-    private func executeAppleScript(_ script: String) -> String? {
-        var error: NSDictionary?
-        let appleScript = NSAppleScript(source: script)
-        let result = appleScript?.executeAndReturnError(&error)
-        
-        if let error = error {
-            let errorCode = error["NSAppleScriptErrorNumber"] as? Int
-            
-            // Handle permission-related errors
-            if errorCode == -1743 || errorCode == -1744 {
-                PermissionManager.shared.handleBrowserPermissionResult(success: false)
-            } else {
-                // Log non-permission AppleScript errors using os_log
-                os_log(.error, log: .default, "BrowserDetector AppleScript error: %@", error.description)
-                
-                // Send error to UI
-                PermissionManager.shared.handleBrowserError("Browser communication error: \(error.description)")
-            }
+        // Check if private browsing is active and tracking is disabled
+        if !trackPrivateBrowsing && browser.isInPrivateBrowsingMode() {
             return nil
         }
         
-        // If we successfully executed AppleScript, permissions are working
-        if result != nil {
-            PermissionManager.shared.handleBrowserPermissionResult(success: true)
-        }
-        
-        return result?.stringValue
+        guard let url = browser.getCurrentURL() else { return nil }
+        return (url: url, browserBundleId: bundleId)
     }
     
-    // MARK: - Accessibility API Fallback
+    // MARK: - Browser Management
     
-    private func getURLViaAccessibility(bundleId: String) -> String? {
-        guard let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == bundleId }),
-              let pid = app.processIdentifier as pid_t? else {
-            return nil
-        }
-        
-        let appRef = AXUIElementCreateApplication(pid)
-        var windows: CFTypeRef?
-        
-        let result = AXUIElementCopyAttributeValue(appRef, kAXWindowsAttribute as CFString, &windows)
-        guard result == .success,
-              let windowsArray = windows as? [AXUIElement],
-              !windowsArray.isEmpty else {
-            return nil
-        }
-        
-        // Try to get URL from the first window's address bar
-        let window = windowsArray[0]
-        var focused: CFTypeRef?
-        AXUIElementCopyAttributeValue(window, kAXFocusedUIElementAttribute as CFString, &focused)
-        
-        // This is a simplified approach - a full implementation would need more complex UI traversal
-        return nil
+    /// Gets a browser instance for the given bundle identifier.
+    /// - Parameter bundleId: The bundle identifier of the browser
+    /// - Returns: BrowserInterface instance if supported, nil otherwise
+    func getBrowser(for bundleId: String) -> BrowserInterface? {
+        return browsers[bundleId]
     }
     
     // MARK: - URL Processing
@@ -324,4 +237,5 @@ class WebTrackingService {
         
         return bitmap.representation(using: .png, properties: [:])
     }
+    
 }

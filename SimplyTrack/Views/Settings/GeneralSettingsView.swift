@@ -19,7 +19,10 @@ struct GeneralSettingsView: View {
         VStack(alignment: .leading, spacing: 0) {
             Form {
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack {
+                    HStack(alignment: .top) {
+                        Image(systemName: "power")
+                            .foregroundColor(.blue)
+                            .frame(width: 16)
                         Toggle("Launch SimplyTrack at login", isOn: Binding(
                             get: { launchAtLoginEnabled },
                             set: { _ in toggleLaunchAtLogin() }
@@ -34,7 +37,10 @@ struct GeneralSettingsView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack {
+                    HStack(alignment: .top) {
+                        Image(systemName: "arrow.down.circle")
+                            .foregroundColor(.green)
+                            .frame(width: 16)
                         Text("Check for updates")
                         
                         Spacer()

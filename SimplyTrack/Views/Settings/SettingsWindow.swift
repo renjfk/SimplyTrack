@@ -27,6 +27,13 @@ struct SettingsWindow: View {
                     Text("AI")
                 }
                 .tag(1)
+            
+            PrivacySettingsView()
+                .tabItem {
+                    Image(systemName: "lock.fill")
+                    Text("Privacy")
+                }
+                .tag(2)
         }
         .frame(width: 550, height: 400)
     }

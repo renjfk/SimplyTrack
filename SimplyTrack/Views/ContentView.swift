@@ -49,6 +49,8 @@ struct ContentView: View {
     // Data fetch tracking
     @State private var lastDailyFetchDate: Date?
     @State private var lastWeeklyFetchDate: Date?
+    @State private var lastDailyFetchTime: Date?
+    @State private var lastWeeklyFetchTime: Date?
     @State private var isDailyFetching = false
     @State private var isWeeklyFetching = false
     @State private var isPopoverVisible = false
@@ -88,6 +90,28 @@ struct ContentView: View {
                             primaryButtonTitle: "Open System Preferences",
                             primaryAction: { permissionManager.openSystemPreferences() },
                             color: .red
+                        )
+                    }
+                    
+                    // System Events Permission Banner
+                    if permissionManager.systemEventsPermissionStatus == .denied {
+                        PermissionBannerView(
+                            title: "System Events Permission Required",
+                            message: "SimplyTrack needs System Events access to detect Safari private browsing. Enable it in System Preferences.",
+                            primaryButtonTitle: "Open System Preferences",
+                            primaryAction: { permissionManager.openSystemPreferences() },
+                            color: .orange
+                        )
+                    }
+                    
+                    // Accessibility Permission Banner
+                    if permissionManager.accessibilityPermissionStatus == .denied {
+                        PermissionBannerView(
+                            title: "Accessibility Permission Required",
+                            message: "SimplyTrack needs Accessibility access to detect Safari private browsing. Enable it in System Preferences.",
+                            primaryButtonTitle: "Open System Preferences",
+                            primaryAction: { permissionManager.openAccessibilityPreferences() },
+                            color: .orange
                         )
                     }
                     
@@ -297,9 +321,13 @@ struct ContentView: View {
     
     private func refreshDailyData() {
         let calendar = Calendar.current
+        let now = Date()
         
-        // Check if we already have this data
-        if let lastDate = lastDailyFetchDate, calendar.isDate(lastDate, inSameDayAs: selectedDate) {
+        // Check if we already have this data and it's not stale (30 second cache)
+        if let lastDate = lastDailyFetchDate, 
+           let lastFetchTime = lastDailyFetchTime,
+           calendar.isDate(lastDate, inSameDayAs: selectedDate),
+           now.timeIntervalSince(lastFetchTime) < TrackingService.dataPersistenceInterval {
             return
         }
         
@@ -318,6 +346,7 @@ struct ContentView: View {
                 cachedTopApps = results.topApps
                 cachedTopWebsites = results.topWebsites
                 lastDailyFetchDate = selectedDate
+                lastDailyFetchTime = Date()
                 isDailyFetching = false
             }
         }
@@ -326,11 +355,14 @@ struct ContentView: View {
     private func refreshWeeklyData() {
         let calendar = Calendar.current
         let currentWeekStart = calendar.dateInterval(of: .weekOfYear, for: selectedDate)?.start ?? selectedDate
+        let now = Date()
         
-        // Check if we already have this data
+        // Check if we already have this data and it's not stale (30 second cache)
         if let lastDate = lastWeeklyFetchDate,
+           let lastFetchTime = lastWeeklyFetchTime,
            let lastWeekStart = calendar.dateInterval(of: .weekOfYear, for: lastDate)?.start,
-           calendar.isDate(currentWeekStart, inSameDayAs: lastWeekStart) {
+           calendar.isDate(currentWeekStart, inSameDayAs: lastWeekStart),
+           now.timeIntervalSince(lastFetchTime) < TrackingService.dataPersistenceInterval {
             return
         }
         
@@ -349,6 +381,7 @@ struct ContentView: View {
                 cachedWeeklyTopApps = results.weeklyTopApps
                 cachedWeeklyTopWebsites = results.weeklyTopWebsites
                 lastWeeklyFetchDate = selectedDate
+                lastWeeklyFetchTime = Date()
                 isWeeklyFetching = false
             }
         }
@@ -684,6 +717,8 @@ struct ContentView: View {
             // Invalidate cache since we cleared data
             lastDailyFetchDate = nil
             lastWeeklyFetchDate = nil
+            lastDailyFetchTime = nil
+            lastWeeklyFetchTime = nil
             isDailyFetching = false
             isWeeklyFetching = false
             refreshCachedValues()
