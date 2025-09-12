@@ -32,10 +32,12 @@ actor FaviconCacheActor {
 class WebTrackingService {
     
     private let browsers: [String: BrowserInterface] = [
-        "com.apple.Safari": SafariBrowser(),
-        "com.google.Chrome": ChromeBrowser(),
-        "com.microsoft.edgemac": EdgeBrowser()
-    ]
+        SafariBrowser(),
+        ChromeBrowser(),
+        EdgeBrowser()
+    ].reduce(into: [:]) { result, browser in
+        result[browser.bundleId] = browser
+    }
     
     private let faviconCacheActor = FaviconCacheActor()
     
