@@ -75,6 +75,19 @@ class PermissionManager: ObservableObject {
         }
     }
     
+    /// Updates Accessibility permission status based on AppleScript execution results.
+    /// Called by Safari browser when Accessibility operations succeed or fail.
+    /// - Parameter success: Whether the Accessibility operation was successful
+    func handleAccessibilityPermissionResult(success: Bool) {
+        Task { @MainActor in
+            if success {
+                self.accessibilityPermissionStatus = .granted
+            } else {
+                self.accessibilityPermissionStatus = .denied
+            }
+        }
+    }
+    
     /// Opens System Preferences to the Automation privacy settings.
     /// Allows users to grant AppleScript permissions for browser automation and System Events access.
     func openSystemPreferences() {
@@ -103,23 +116,5 @@ class PermissionManager: ObservableObject {
         Task { @MainActor in
             self.lastError = nil
         }
-    }
-    
-    
-    
-    // MARK: - Accessibility Permissions
-    
-    /// Checks the current status of Accessibility permissions.
-    /// Required for Safari private browsing detection via UI automation.
-    /// - Returns: Current accessibility permission status
-    func checkAccessibilityPermissions() -> PermissionStatus {
-        let hasPermission = AXIsProcessTrusted()
-        let status: PermissionStatus = hasPermission ? .granted : .denied
-        
-        Task { @MainActor in
-            self.accessibilityPermissionStatus = status
-        }
-        
-        return status
     }
 }

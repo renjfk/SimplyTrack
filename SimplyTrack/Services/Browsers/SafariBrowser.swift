@@ -34,12 +34,6 @@ class SafariBrowser: BaseBrowser {
     /// Uses System Events to check for private window menu item.
     /// - Returns: true if private browsing is detected, false otherwise
     override func isInPrivateBrowsingMode() -> Bool {
-        // Check if we have Accessibility permissions first (required for System Events UI automation)
-        let hasAccessibilityPermission = PermissionManager.shared.checkAccessibilityPermissions() == .granted
-        if !hasAccessibilityPermission {
-            return false
-        }
-        
         let systemEventsScript = """
 tell application "System Events"
   tell process "Safari"
@@ -55,7 +49,11 @@ end tell
         // Handle System Events permission result
         if let error = scriptResult.error {
             // Handle permission-related errors
-            if scriptResult.errorCode == -1743 || scriptResult.errorCode == -1744 {
+            if scriptResult.errorCode == -1719 {
+                // Accessibility permission denied
+                PermissionManager.shared.handleAccessibilityPermissionResult(success: false)
+            } else if scriptResult.errorCode == -1743 || scriptResult.errorCode == -1744 {
+                // System Events permission errors
                 PermissionManager.shared.handleSystemEventsPermissionResult(success: false)
             } else {
                 // Log non-permission System Events errors
@@ -67,6 +65,7 @@ end tell
         // If we successfully executed System Events AppleScript, permissions are working
         if scriptResult.result != nil {
             PermissionManager.shared.handleSystemEventsPermissionResult(success: true)
+            PermissionManager.shared.handleAccessibilityPermissionResult(success: true)
         }
         
         if let resultString = scriptResult.result, let isPrivate = Bool(resultString.lowercased()) {
