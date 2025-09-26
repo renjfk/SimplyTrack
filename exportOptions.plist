@@ -6,6 +6,8 @@
 	<string>developer-id</string>
 	<key>signingStyle</key>
 	<string>manual</string>
+	<key>signingCertificate</key>
+	<string>Developer ID Application</string>
 	<key>uploadBitcode</key>
 	<false/>
 	<key>uploadSymbols</key>
