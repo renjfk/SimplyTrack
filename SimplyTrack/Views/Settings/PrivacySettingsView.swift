@@ -11,7 +11,7 @@ import SwiftUI
 /// Provides user control over whether private/incognito tabs should be tracked.
 struct PrivacySettingsView: View {
     @AppStorage("trackPrivateBrowsing", store: .app) private var trackPrivateBrowsing = AppStorageDefaults.trackPrivateBrowsing
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Form {
@@ -25,12 +25,12 @@ struct PrivacySettingsView: View {
                             .toggleStyle(.switch)
                         Spacer()
                     }
-                    
+
                     Text("When enabled, SimplyTrack will monitor your activity even when browsing in private/incognito mode")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                
+
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(alignment: .top) {
                         Image(systemName: "exclamationmark.triangle.fill")
@@ -40,7 +40,7 @@ struct PrivacySettingsView: View {
                             .font(.headline)
                         Spacer()
                     }
-                    
+
                     VStack(alignment: .leading, spacing: 8) {
                         Text("• Private browsing tracking is disabled by default to protect your privacy")
                         Text("• When disabled, URLs from private/incognito tabs will not be recorded")
@@ -50,7 +50,7 @@ struct PrivacySettingsView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                 }
-                
+
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(alignment: .top) {
                         Image(systemName: "globe")
@@ -60,7 +60,7 @@ struct PrivacySettingsView: View {
                             .font(.headline)
                         Spacer()
                     }
-                    
+
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(.green)
@@ -70,7 +70,7 @@ struct PrivacySettingsView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    
+
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(.green)
@@ -80,7 +80,7 @@ struct PrivacySettingsView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    
+
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(.green)
@@ -93,7 +93,7 @@ struct PrivacySettingsView: View {
                 }
             }
             .formStyle(.grouped)
-            
+
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

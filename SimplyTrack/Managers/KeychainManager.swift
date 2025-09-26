@@ -14,18 +14,18 @@ import Security
 struct KeychainManager {
     /// Shared singleton instance for keychain operations
     static let shared = KeychainManager()
-    
+
     private init() {}
-    
+
     private let service: String = {
         let bundleId = Bundle.main.bundleIdentifier!
         #if DEBUG
-        return "\(bundleId).debug"
+            return "\(bundleId).debug"
         #else
-        return bundleId
+            return bundleId
         #endif
     }()
-    
+
     /// Saves a string value securely in the keychain.
     /// Overwrites any existing value for the same key.
     /// - Parameters:
@@ -36,24 +36,24 @@ struct KeychainManager {
         guard let data = value.data(using: .utf8) else {
             throw KeychainError.invalidData
         }
-        
+
         // Delete any existing item first
         try? delete(key: key)
-        
+
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: key,
-            kSecValueData as String: data
+            kSecValueData as String: data,
         ]
-        
+
         let status = SecItemAdd(query as CFDictionary, nil)
-        
+
         guard status == errSecSuccess else {
             throw KeychainError.saveFailed(status)
         }
     }
-    
+
     /// Retrieves a string value from the keychain.
     /// - Parameter key: Unique identifier for the stored value
     /// - Returns: Stored string value, nil if not found
@@ -64,28 +64,29 @@ struct KeychainManager {
             kSecAttrService as String: service,
             kSecAttrAccount as String: key,
             kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
+            kSecMatchLimit as String: kSecMatchLimitOne,
         ]
-        
+
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
-        
+
         if status == errSecItemNotFound {
             return nil
         }
-        
+
         guard status == errSecSuccess else {
             throw KeychainError.retrieveFailed(status)
         }
-        
+
         guard let data = result as? Data,
-              let string = String(data: data, encoding: .utf8) else {
+            let string = String(data: data, encoding: .utf8)
+        else {
             throw KeychainError.invalidData
         }
-        
+
         return string
     }
-    
+
     /// Removes a stored value from the keychain.
     /// - Parameter key: Unique identifier for the value to remove
     /// - Throws: KeychainError if the deletion fails (ignores "not found" errors)
@@ -93,11 +94,11 @@ struct KeychainManager {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: key
+            kSecAttrAccount as String: key,
         ]
-        
+
         let status = SecItemDelete(query as CFDictionary)
-        
+
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw KeychainError.deleteFailed(status)
         }
@@ -111,7 +112,7 @@ enum KeychainError: LocalizedError {
     case saveFailed(OSStatus)
     case retrieveFailed(OSStatus)
     case deleteFailed(OSStatus)
-    
+
     var errorDescription: String? {
         switch self {
         case .invalidData:

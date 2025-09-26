@@ -15,7 +15,7 @@ import Foundation
 struct OpenAIChatMessage: Codable {
     /// Role of the message sender (e.g., "user", "assistant", "system")
     let role: String
-    
+
     /// Content of the message
     let content: String
 }
@@ -25,16 +25,16 @@ struct OpenAIChatMessage: Codable {
 struct OpenAIChatRequest: Codable {
     /// AI model to use for generation (e.g., "gpt-3.5-turbo", "gpt-4")
     let model: String
-    
+
     /// Array of messages forming the conversation context
     let messages: [OpenAIChatMessage]
-    
+
     /// Controls randomness in response generation (0.0-2.0)
     let temperature: Double?
-    
+
     /// Maximum number of tokens to generate in response
     let maxTokens: Int?
-    
+
     enum CodingKeys: String, CodingKey {
         case model, messages, temperature
         case maxTokens = "max_tokens"
@@ -46,13 +46,13 @@ struct OpenAIChatRequest: Codable {
 struct OpenAIChatChoice: Codable {
     /// Index of this choice in the response array
     let index: Int
-    
+
     /// The generated message content
     let message: OpenAIChatMessage
-    
+
     /// Reason why generation stopped (e.g., "stop", "length", "content_filter")
     let finishReason: String?
-    
+
     enum CodingKeys: String, CodingKey {
         case index, message
         case finishReason = "finish_reason"
@@ -64,13 +64,13 @@ struct OpenAIChatChoice: Codable {
 struct OpenAIChatUsage: Codable {
     /// Number of tokens in the input prompt
     let promptTokens: Int
-    
+
     /// Number of tokens in the generated completion
     let completionTokens: Int
-    
+
     /// Total tokens used (prompt + completion)
     let totalTokens: Int
-    
+
     enum CodingKeys: String, CodingKey {
         case promptTokens = "prompt_tokens"
         case completionTokens = "completion_tokens"
@@ -83,19 +83,19 @@ struct OpenAIChatUsage: Codable {
 struct OpenAIChatResponse: Codable {
     /// Unique identifier for this API request
     let id: String
-    
+
     /// Response object type (always "chat.completion")
     let object: String
-    
+
     /// Unix timestamp when the response was created
     let created: Int
-    
+
     /// Model used to generate the response
     let model: String
-    
+
     /// Array of generated response choices
     let choices: [OpenAIChatChoice]
-    
+
     /// Token usage statistics for billing
     let usage: OpenAIChatUsage?
 }
@@ -109,7 +109,7 @@ enum OpenAIError: LocalizedError {
     case httpError(Int, String)
     case decodingError
     case networkError(Error)
-    
+
     var errorDescription: String? {
         switch self {
         case .invalidURL:
@@ -134,7 +134,7 @@ enum OpenAIError: LocalizedError {
 class OpenAIService {
     private let apiURL: String
     private let apiKey: String
-    
+
     /// Initializes the OpenAI service with custom endpoint and API key.
     /// - Parameters:
     ///   - apiURL: API endpoint URL (defaults to OpenAI's chat completions endpoint)
@@ -143,7 +143,7 @@ class OpenAIService {
         self.apiURL = apiURL
         self.apiKey = apiKey
     }
-    
+
     /// Generates chat completions using the configured AI model.
     /// Used for creating AI-powered summaries of user activity data.
     /// - Parameters:
@@ -162,37 +162,37 @@ class OpenAIService {
         guard let url = URL(string: apiURL) else {
             throw OpenAIError.invalidURL
         }
-        
+
         let request = OpenAIChatRequest(
             model: model,
             messages: messages,
             temperature: temperature,
             maxTokens: maxTokens
         )
-        
+
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = "POST"
         urlRequest.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+
         do {
             urlRequest.httpBody = try JSONEncoder().encode(request)
         } catch {
             throw OpenAIError.networkError(error)
         }
-        
+
         do {
             let (data, response) = try await URLSession.shared.data(for: urlRequest)
-            
+
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw OpenAIError.invalidResponse
             }
-            
+
             if httpResponse.statusCode != 200 {
                 let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
                 throw OpenAIError.httpError(httpResponse.statusCode, errorMessage)
             }
-            
+
             do {
                 return try JSONDecoder().decode(OpenAIChatResponse.self, from: data)
             } catch {
@@ -204,5 +204,5 @@ class OpenAIService {
             throw OpenAIError.networkError(error)
         }
     }
-    
+
 }

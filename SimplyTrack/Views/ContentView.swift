@@ -5,10 +5,10 @@
 //  Created by Soner Köksal on 27.08.2025.
 //
 
-import SwiftUI
-import SwiftData
 import AppKit
 import Combine
+import SwiftData
+import SwiftUI
 
 /// Main application interface displayed in the menu bar popover.
 /// Coordinates usage data visualization, permission management, and user interactions.
@@ -23,29 +23,29 @@ struct ContentView: View {
     @State private var errorMessage: String?
     @State private var showingError = false
     @EnvironmentObject private var appDelegate: AppDelegate
-    
+
     @State private var showingClearDataConfirmation = false
-    
+
     @State private var isViewingTodayWhenSelected = true
-    
+
     @State private var cachedWorkPeriods: [(startTime: Date, endTime: Date, duration: TimeInterval)] = []
     @State private var cachedWeeklyActivity: [String: TimeInterval] = [:]
     @State private var cachedTotalActiveTime: TimeInterval = 0
     @State private var cachedTopApps: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)] = []
     @State private var cachedTopWebsites: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)] = []
-    
+
     // Weekly cached data
     @State private var cachedWeeklyTotalActiveTime: TimeInterval = 0
     @State private var cachedWeeklyTopApps: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)] = []
     @State private var cachedWeeklyTopWebsites: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)] = []
-    
+
     // Expandable sections
     @State private var showAllApps = false
     @State private var showAllWebsites = false
-    
+
     // Page view state
     @State private var currentPage = 0
-    
+
     // Data fetch tracking
     @State private var lastDailyFetchDate: Date?
     @State private var lastWeeklyFetchDate: Date?
@@ -54,15 +54,15 @@ struct ContentView: View {
     @State private var isDailyFetching = false
     @State private var isWeeklyFetching = false
     @State private var isPopoverVisible = false
-    
+
     private var currentTopApps: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)] {
         viewMode == .day ? cachedTopApps : cachedWeeklyTopApps
     }
-    
+
     private var currentTopWebsites: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)] {
         viewMode == .day ? cachedTopWebsites : cachedWeeklyTopWebsites
     }
-    
+
     private var currentTotalActiveTime: TimeInterval {
         viewMode == .day ? cachedTotalActiveTime : cachedWeeklyTotalActiveTime
     }
@@ -92,7 +92,7 @@ struct ContentView: View {
                             color: .red
                         )
                     }
-                    
+
                     // System Events Permission Banner
                     if permissionManager.systemEventsPermissionStatus == .denied {
                         PermissionBannerView(
@@ -103,7 +103,7 @@ struct ContentView: View {
                             color: .orange
                         )
                     }
-                    
+
                     // Accessibility Permission Banner
                     if permissionManager.accessibilityPermissionStatus == .denied {
                         PermissionBannerView(
@@ -114,7 +114,7 @@ struct ContentView: View {
                             color: .orange
                         )
                     }
-                    
+
                     // Error Banner - show browser communication errors
                     if let error = permissionManager.lastError {
                         PermissionBannerView(
@@ -126,7 +126,7 @@ struct ContentView: View {
                             color: .orange
                         )
                     }
-                    
+
                     // Notification Permission Banner
                     if appDelegate.notificationPermissionDenied {
                         PermissionBannerView(
@@ -138,7 +138,7 @@ struct ContentView: View {
                             color: .orange
                         )
                     }
-                    
+
                     // Login Items Permission Banner
                     if loginItemManager.permissionDenied {
                         PermissionBannerView(
@@ -150,7 +150,7 @@ struct ContentView: View {
                             color: .orange
                         )
                     }
-                    
+
                     // Active Time Chart
                     ActiveTimeCard(
                         viewMode: viewMode,
@@ -186,12 +186,12 @@ struct ContentView: View {
         .frame(width: 340, height: 600)
         .onChange(of: selectedDate) { _, _ in
             updateTodayViewingStatus()
-//            MockDataGenerator.populateWithMockData(
-//                for: selectedDate,
-//                modelContext: modelContext,
-//                config: MockDataConfig.intense,
-//                sampleFromDate: { let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f.date(from: "2025-09-05") ?? Date() }()
-//            )
+            //            MockDataGenerator.populateWithMockData(
+            //                for: selectedDate,
+            //                modelContext: modelContext,
+            //                config: MockDataConfig.intense,
+            //                sampleFromDate: { let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f.date(from: "2025-09-05") ?? Date() }()
+            //            )
             refreshCachedValues()
         }
         .onChange(of: viewMode) { _, _ in
@@ -223,7 +223,7 @@ struct ContentView: View {
             Button("Clear Data", role: .destructive) {
                 clearData(for: selectedDate, period: viewMode)
             }
-            Button("Cancel", role: .cancel) { }
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("This will permanently delete all tracking data for the selected \(viewMode == .day ? "day" : "week"). This action cannot be undone.")
         }
@@ -250,7 +250,7 @@ struct ContentView: View {
                 .popover(isPresented: $showingCalendar, arrowEdge: .top) {
                     calendarPopover
                 }
-                
+
                 if !isViewingToday {
                     Button(action: { goToToday() }) {
                         Image(systemName: "arrow.clockwise")
@@ -258,7 +258,7 @@ struct ContentView: View {
                     .help("Go to today")
                 }
             }
-            
+
             Spacer()
 
             Button(action: { nextPeriod() }) {
@@ -279,7 +279,7 @@ struct ContentView: View {
                 .padding()
         }
     }
-    
+
     private var bottomControls: some View {
         HStack {
             Spacer()
@@ -292,7 +292,7 @@ struct ContentView: View {
             }
             .pickerStyle(.segmented)
             .frame(width: 140)
-            
+
             Spacer()
 
             SettingsMenuView(
@@ -305,41 +305,42 @@ struct ContentView: View {
     }
 
     // MARK: - Data Management
-    
+
     private func refreshCachedValues() {
         // Don't fetch data if popover isn't visible (except on startup)
         if !isPopoverVisible && lastDailyFetchDate != nil && lastWeeklyFetchDate != nil {
             return
         }
-        
+
         if viewMode == .day {
             refreshDailyData()
         } else {
             refreshWeeklyData()
         }
     }
-    
+
     private func refreshDailyData() {
         let calendar = Calendar.current
         let now = Date()
-        
+
         // Check if we already have this data and it's not stale (30 second cache)
-        if let lastDate = lastDailyFetchDate, 
-           let lastFetchTime = lastDailyFetchTime,
-           calendar.isDate(lastDate, inSameDayAs: selectedDate),
-           now.timeIntervalSince(lastFetchTime) < TrackingService.dataPersistenceInterval {
+        if let lastDate = lastDailyFetchDate,
+            let lastFetchTime = lastDailyFetchTime,
+            calendar.isDate(lastDate, inSameDayAs: selectedDate),
+            now.timeIntervalSince(lastFetchTime) < TrackingService.dataPersistenceInterval
+        {
             return
         }
-        
+
         // Check if we're already fetching
         if isDailyFetching {
             return
         }
-        
+
         isDailyFetching = true
         Task {
             let results = await fetchDailyData()
-            
+
             await MainActor.run {
                 cachedWorkPeriods = results.workPeriods
                 cachedTotalActiveTime = results.totalActiveTime
@@ -351,30 +352,31 @@ struct ContentView: View {
             }
         }
     }
-    
+
     private func refreshWeeklyData() {
         let calendar = Calendar.current
         let currentWeekStart = calendar.dateInterval(of: .weekOfYear, for: selectedDate)?.start ?? selectedDate
         let now = Date()
-        
+
         // Check if we already have this data and it's not stale (30 second cache)
         if let lastDate = lastWeeklyFetchDate,
-           let lastFetchTime = lastWeeklyFetchTime,
-           let lastWeekStart = calendar.dateInterval(of: .weekOfYear, for: lastDate)?.start,
-           calendar.isDate(currentWeekStart, inSameDayAs: lastWeekStart),
-           now.timeIntervalSince(lastFetchTime) < TrackingService.dataPersistenceInterval {
+            let lastFetchTime = lastWeeklyFetchTime,
+            let lastWeekStart = calendar.dateInterval(of: .weekOfYear, for: lastDate)?.start,
+            calendar.isDate(currentWeekStart, inSameDayAs: lastWeekStart),
+            now.timeIntervalSince(lastFetchTime) < TrackingService.dataPersistenceInterval
+        {
             return
         }
-        
+
         // Check if we're already fetching
         if isWeeklyFetching {
             return
         }
-        
+
         isWeeklyFetching = true
         Task {
             let results = await fetchWeeklyData()
-            
+
             await MainActor.run {
                 cachedWeeklyActivity = results.weeklyActivity
                 cachedWeeklyTotalActiveTime = results.weeklyTotalActiveTime
@@ -386,7 +388,7 @@ struct ContentView: View {
             }
         }
     }
-    
+
     private func handleError(_ error: Error, context: String) {
         DispatchQueue.main.async {
             errorMessage = "\(context): \(error.localizedDescription)"
@@ -402,20 +404,20 @@ struct ContentView: View {
         let topApps: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)]
         let topWebsites: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)]
     }
-    
+
     private struct WeeklyDataResults {
         let weeklyActivity: [String: TimeInterval]
         let weeklyTotalActiveTime: TimeInterval
         let weeklyTopApps: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)]
         let weeklyTopWebsites: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)]
     }
-    
+
     @MainActor
     private func fetchDailyData() async -> DailyDataResults {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: selectedDate)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
-        
+
         do {
             let dailyDescriptor = FetchDescriptor<UsageSession>(
                 predicate: #Predicate<UsageSession> { session in
@@ -424,25 +426,27 @@ struct ContentView: View {
                 sortBy: [
                     SortDescriptor(\.type),
                     SortDescriptor(\.identifier),
-                    SortDescriptor(\.startTime)
+                    SortDescriptor(\.startTime),
                 ]
             )
-            
+
             let iconDescriptor = FetchDescriptor<Icon>()
             let icons = try modelContext.fetch(iconDescriptor)
-            let iconMap = Dictionary(uniqueKeysWithValues: icons.compactMap { icon in
-                icon.iconData != nil ? (icon.identifier, icon.iconData!) : nil
-            })
-            
+            let iconMap = Dictionary(
+                uniqueKeysWithValues: icons.compactMap { icon in
+                    icon.iconData != nil ? (icon.identifier, icon.iconData!) : nil
+                }
+            )
+
             let dailyResult = try modelContext.fetch(dailyDescriptor)
             let appSessions = dailyResult.filter { $0.type == "app" }
             let websiteSessions = dailyResult.filter { $0.type == "website" }
-            
+
             let workPeriods = computeWorkPeriods(from: appSessions)
             let totalActiveTime = appSessions.reduce(0) { $0 + $1.duration }
             let topApps = aggregateAppSessions(appSessions, iconMap: iconMap)
             let topWebsites = aggregateWebsiteSessions(websiteSessions, iconMap: iconMap)
-            
+
             return DailyDataResults(
                 workPeriods: workPeriods,
                 totalActiveTime: totalActiveTime,
@@ -459,13 +463,13 @@ struct ContentView: View {
             )
         }
     }
-    
+
     @MainActor
     private func fetchWeeklyData() async -> WeeklyDataResults {
         let calendar = Calendar.current
         let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: selectedDate)?.start ?? selectedDate
         let endOfWeek = calendar.date(byAdding: .weekOfYear, value: 1, to: startOfWeek)!
-        
+
         do {
             let weeklyDescriptor = FetchDescriptor<UsageSession>(
                 predicate: #Predicate<UsageSession> { session in
@@ -473,28 +477,30 @@ struct ContentView: View {
                 },
                 sortBy: [SortDescriptor(\.startTime)]
             )
-            
+
             let weeklyWebsiteDescriptor = FetchDescriptor<UsageSession>(
                 predicate: #Predicate<UsageSession> { session in
                     session.startTime >= startOfWeek && session.startTime < endOfWeek && session.type == "website" && session.endTime != nil
                 },
                 sortBy: [SortDescriptor(\.startTime)]
             )
-            
+
             let iconDescriptor = FetchDescriptor<Icon>()
             let icons = try modelContext.fetch(iconDescriptor)
-            let iconMap = Dictionary(uniqueKeysWithValues: icons.compactMap { icon in
-                icon.iconData != nil ? (icon.identifier, icon.iconData!) : nil
-            })
-            
+            let iconMap = Dictionary(
+                uniqueKeysWithValues: icons.compactMap { icon in
+                    icon.iconData != nil ? (icon.identifier, icon.iconData!) : nil
+                }
+            )
+
             let weeklyResult = try modelContext.fetch(weeklyDescriptor)
             let weeklyWebsiteResult = try modelContext.fetch(weeklyWebsiteDescriptor)
-            
+
             let weeklyActivity = computeWeeklyActivity(from: weeklyResult)
             let weeklyTotalActiveTime = weeklyResult.reduce(0) { $0 + $1.duration }
             let weeklyTopApps = aggregateAppSessions(weeklyResult, iconMap: iconMap)
             let weeklyTopWebsites = aggregateWebsiteSessions(weeklyWebsiteResult, iconMap: iconMap)
-            
+
             return WeeklyDataResults(
                 weeklyActivity: weeklyActivity,
                 weeklyTotalActiveTime: weeklyTotalActiveTime,
@@ -512,24 +518,23 @@ struct ContentView: View {
         }
     }
 
-    
     // MARK: - Session Data Processing
-    
+
     private func computeWorkPeriods(from sessions: [UsageSession]) -> [(startTime: Date, endTime: Date, duration: TimeInterval)] {
         // Filter out sessions without end times and sort by start time
         let completedSessions = sessions.compactMap { session -> (Date, Date)? in
             guard let endTime = session.endTime else { return nil }
             return (session.startTime, endTime)
         }.sorted { $0.0 < $1.0 }
-        
-        guard !completedSessions.isEmpty else { 
-            return [] 
+
+        guard !completedSessions.isEmpty else {
+            return []
         }
-        
+
         var mergedPeriods: [(Date, Date)] = []
         var currentStart = completedSessions[0].0
         var currentEnd = completedSessions[0].1
-        
+
         for (sessionStartTime, sessionEndTime) in completedSessions.dropFirst() {
             if sessionStartTime <= currentEnd {
                 // Overlapping or adjacent sessions - merge them
@@ -541,22 +546,22 @@ struct ContentView: View {
                 currentEnd = sessionEndTime
             }
         }
-        
+
         // Add the last period
         mergedPeriods.append((currentStart, currentEnd))
-        
+
         // Convert to the expected format with duration
         let result = mergedPeriods.map { (periodStartTime, periodEndTime) in
             let duration = periodEndTime.timeIntervalSince(periodStartTime)
             return (startTime: periodStartTime, endTime: periodEndTime, duration: duration)
         }
-        
+
         return result
     }
-    
+
     private func aggregateAppSessions(_ sessions: [UsageSession], iconMap: [String: Data]) -> [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)] {
         var appData: [String: (name: String, totalTime: TimeInterval)] = [:]
-        
+
         for session in sessions {
             let existing = appData[session.identifier, default: (name: session.name, totalTime: 0)]
             appData[session.identifier] = (
@@ -564,19 +569,20 @@ struct ContentView: View {
                 totalTime: existing.totalTime + session.duration
             )
         }
-        
-        let result = appData
+
+        let result =
+            appData
             .map { (identifier, data) in
                 (identifier: identifier, name: data.name, iconData: iconMap[identifier], totalTime: data.totalTime)
             }
             .sorted { $0.totalTime > $1.totalTime }
-        
+
         return result
     }
-    
+
     private func aggregateWebsiteSessions(_ sessions: [UsageSession], iconMap: [String: Data]) -> [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)] {
         var websiteData: [String: (name: String, totalTime: TimeInterval)] = [:]
-        
+
         for session in sessions {
             let existing = websiteData[session.identifier, default: (name: session.name, totalTime: 0)]
             websiteData[session.identifier] = (
@@ -584,31 +590,32 @@ struct ContentView: View {
                 totalTime: existing.totalTime + session.duration
             )
         }
-        
-        let result = websiteData
+
+        let result =
+            websiteData
             .map { (identifier, data) in
                 (identifier: identifier, name: data.name, iconData: iconMap[identifier] ?? nil, totalTime: data.totalTime)
             }
             .sorted { $0.totalTime > $1.totalTime }
-        
+
         return result
     }
-    
+
     private func computeWeeklyActivity(from sessions: [UsageSession]) -> [String: TimeInterval] {
         var weeklyActivity: [String: TimeInterval] = [:]
         let calendar = Calendar.current
-        
+
         for session in sessions {
             let dayName = calendar.shortWeekdaySymbols[calendar.component(.weekday, from: session.startTime) - 1]
-            let dayKey = String(dayName.prefix(3)).uppercased() // Use 3-letter abbreviations
+            let dayKey = String(dayName.prefix(3)).uppercased()  // Use 3-letter abbreviations
             weeklyActivity[dayKey, default: 0] += session.duration
         }
-        
+
         return weeklyActivity
     }
 
     // MARK: - UI Computed Properties
-    
+
     private var headerTitle: String {
         let formatter = DateFormatter()
         if viewMode == .day {
@@ -627,11 +634,11 @@ struct ContentView: View {
             return "\(formatter.string(from: startOfWeek)) - \(formatter.string(from: endOfWeek))"
         }
     }
-    
+
     private var canGoToNextPeriod: Bool {
         let calendar = Calendar.current
         let today = Date()
-        
+
         if viewMode == .day {
             return !calendar.isDate(selectedDate, inSameDayAs: today)
         } else {
@@ -640,11 +647,11 @@ struct ContentView: View {
             return selectedWeekStart < currentWeekStart
         }
     }
-    
+
     private var isViewingToday: Bool {
         let calendar = Calendar.current
         let today = Date()
-        
+
         if viewMode == .day {
             return calendar.isDate(selectedDate, inSameDayAs: today)
         } else {
@@ -653,7 +660,6 @@ struct ContentView: View {
             return calendar.isDate(selectedWeekStart, inSameDayAs: currentWeekStart)
         }
     }
-    
 
     // MARK: - Helper Methods
 
@@ -676,22 +682,21 @@ struct ContentView: View {
             selectedDate = Calendar.current.date(byAdding: .weekOfYear, value: 1, to: selectedDate) ?? selectedDate
         }
     }
-    
+
     private func goToToday() {
         selectedDate = Date()
     }
-    
-    
+
     private func openNotificationSettings() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.notifications") {
             NSWorkspace.shared.open(url)
         }
     }
-    
+
     private func clearData(for date: Date, period: ViewMode) {
         let calendar = Calendar.current
         let (startDate, endDate, errorContext): (Date, Date, String)
-        
+
         if period == .day {
             let startOfDay = calendar.startOfDay(for: date)
             let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
@@ -701,7 +706,7 @@ struct ContentView: View {
             let endOfWeek = calendar.date(byAdding: .weekOfYear, value: 1, to: startOfWeek)!
             (startDate, endDate, errorContext) = (startOfWeek, endOfWeek, "Failed to clear week data")
         }
-        
+
         do {
             let descriptor = FetchDescriptor<UsageSession>(
                 predicate: #Predicate<UsageSession> { session in

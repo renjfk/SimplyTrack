@@ -19,7 +19,7 @@ class Icon {
     var iconData: Data?
     /// Timestamp when this icon was last refreshed
     var lastUpdated: Date
-    
+
     /// Creates a new icon cache entry.
     /// - Parameters:
     ///   - identifier: Bundle ID for apps or domain for websites
@@ -29,14 +29,14 @@ class Icon {
         self.iconData = iconData
         self.lastUpdated = Date()
     }
-    
+
     /// Determines if this cached icon should be refreshed.
     /// Icons are considered stale after one week.
     var needsUpdate: Bool {
         let oneWeekAgo = Calendar.current.date(byAdding: .weekOfYear, value: -1, to: Date()) ?? Date()
         return lastUpdated < oneWeekAgo
     }
-    
+
     /// Updates the cached icon with new data and refreshes the timestamp.
     /// - Parameter newData: New PNG icon data to store
     func updateIcon(with newData: Data?) {

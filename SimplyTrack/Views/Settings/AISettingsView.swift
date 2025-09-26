@@ -14,24 +14,25 @@ struct AISettingsView: View {
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "AISettingsView")
     @AppStorage("aiEndpoint", store: .app) private var aiEndpoint = ""
     @AppStorage("aiModel", store: .app) private var aiModel = ""
-    
+
     @State private var aiApiKey = ""
     @State private var isTestingConnection = false
     @State private var testResult: TestResult?
-    
+    @StateObject private var claudeConfigManager = ClaudeDesktopConfigManager()
+
     // Notification settings
     @AppStorage("summaryNotificationsEnabled", store: .app) private var summaryNotificationsEnabled = false
     @AppStorage("summaryNotificationTime", store: .app) private var summaryNotificationTime: Double = AppStorageDefaults.summaryNotificationTime
     @AppStorage("summaryNotificationPrompt", store: .app) private var summaryNotificationPrompt = AppStorageDefaults.summaryNotificationPrompt
-    
+
     private var hasValidationErrors: Bool {
         aiEndpoint.isEmpty || aiModel.isEmpty || summaryNotificationPrompt.isEmpty
     }
-    
+
     private var canTestSettings: Bool {
         !aiEndpoint.isEmpty && !aiModel.isEmpty
     }
-    
+
     enum TestResult {
         case success(String)
         case failure(String)
@@ -54,7 +55,7 @@ struct AISettingsView: View {
                             errorMessage: "Endpoint is required"
                         )
                     }
-                    
+
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(alignment: .top) {
                             Image(systemName: "key.fill")
@@ -67,12 +68,12 @@ struct AISettingsView: View {
                                 saveApiKeyToKeychain(newValue)
                             }
                         }
-                        
+
                         Text("Your API key (optional, stored securely in Keychain)")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    
+
                     HStack(alignment: .top) {
                         Image(systemName: "brain")
                             .foregroundColor(.purple)
@@ -86,7 +87,7 @@ struct AISettingsView: View {
                             errorMessage: "Model is required"
                         )
                     }
-                    
+
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(alignment: .top) {
                             Image(systemName: "network")
@@ -98,84 +99,91 @@ struct AISettingsView: View {
                                 }
                             }
                             .disabled(!canTestSettings || isTestingConnection)
-                            
+
                             if isTestingConnection {
                                 ProgressView()
                                     .scaleEffect(0.8)
                                     .frame(width: 16, height: 16)
                             }
-                            
+
                             Spacer()
                         }
-                        
+
                         Text("Test API endpoint and model availability. Your AI provider may charge for each token used.")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
                     .padding(.top, 8)
-                    
+
                     if let result = testResult {
                         HStack(alignment: .top, spacing: 8) {
                             Image(systemName: result.isSuccess ? "checkmark.circle.fill" : "xmark.circle.fill")
                                 .foregroundColor(result.isSuccess ? .green : .red)
                                 .font(.caption)
-                            
+
                             Text(result.message)
                                 .font(.caption)
                                 .foregroundColor(result.isSuccess ? .green : .red)
                                 .multilineTextAlignment(.leading)
-                            
+
                             Spacer()
                         }
                         .padding(.top, 4)
                     }
-                    
+
                 }
-                
+
                 Section("Summary Notifications") {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(alignment: .top) {
                             Image(systemName: "bell.fill")
                                 .foregroundColor(.blue)
                                 .frame(width: 16)
-                            Toggle("Enable summary notification", isOn: Binding(
-                                get: { summaryNotificationsEnabled && !hasValidationErrors },
-                                set: { newValue in
-                                    summaryNotificationsEnabled = newValue
-                                }
-                            ))
-                                .disabled(hasValidationErrors)
-                                .toggleStyle(.switch)
+                            Toggle(
+                                "Enable summary notification",
+                                isOn: Binding(
+                                    get: { summaryNotificationsEnabled && !hasValidationErrors },
+                                    set: { newValue in
+                                        summaryNotificationsEnabled = newValue
+                                    }
+                                )
+                            )
+                            .disabled(hasValidationErrors)
+                            .toggleStyle(.switch)
                             Spacer()
                         }
-                        
+
                         Text("Send daily notification with AI-generated usage summary")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    
+
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(alignment: .top) {
                             Image(systemName: "clock")
                                 .foregroundColor(.orange)
                                 .frame(width: 16)
                             Text("Notification time")
-                            
+
                             Spacer()
-                            
-                            DatePicker("", selection: Binding(
-                                get: { Date(timeIntervalSince1970: summaryNotificationTime) },
-                                set: { summaryNotificationTime = $0.timeIntervalSince1970 }
-                            ), displayedComponents: .hourAndMinute)
-                                .labelsHidden()
-                                .frame(width: 100)
+
+                            DatePicker(
+                                "",
+                                selection: Binding(
+                                    get: { Date(timeIntervalSince1970: summaryNotificationTime) },
+                                    set: { summaryNotificationTime = $0.timeIntervalSince1970 }
+                                ),
+                                displayedComponents: .hourAndMinute
+                            )
+                            .labelsHidden()
+                            .frame(width: 100)
                         }
-                        
+
                         Text("Time to receive daily summary notifications")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    
+
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(alignment: .top) {
                             Image(systemName: "text.bubble")
@@ -186,7 +194,7 @@ struct AISettingsView: View {
                             }
                             .lineLimit(5...10)
                         }
-                        
+
                         if summaryNotificationsEnabled && summaryNotificationPrompt.isEmpty {
                             Text("Prompt is required")
                                 .font(.caption)
@@ -198,34 +206,113 @@ struct AISettingsView: View {
                         }
                     }
                 }
+
+                Section("AI Tool Integration") {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .top) {
+                            Image(systemName: "terminal")
+                                .foregroundColor(.blue)
+                                .frame(width: 16)
+                            Text("MCP Server Configuration")
+                                .font(.headline)
+                            Spacer()
+                        }
+
+                        Text("SimplyTrack includes a bundled MCP (Model Context Protocol) server for AI tool integration")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .top) {
+                            Image(systemName: "doc.text")
+                                .foregroundColor(.purple)
+                                .frame(width: 16)
+                            Text("Configuration")
+                            Spacer()
+                        }
+
+                        TextEditor(text: .constant(claudeConfigManager.mcpConfiguration))
+                            .font(.system(.caption, design: .monospaced))
+                            .frame(height: 110)
+                            .background(Color(NSColor.controlBackgroundColor))
+                            .cornerRadius(6)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                            )
+
+                        Text("Copy this configuration to your Claude Desktop config file (\(claudeConfigManager.claudeConfigPath))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .top) {
+                            Image(systemName: claudeConfigManager.status.icon)
+                                .foregroundColor(claudeConfigManager.status.color)
+                                .frame(width: 16)
+
+                            Text(claudeConfigManager.status.message)
+                                .foregroundColor(claudeConfigManager.status.color)
+
+                            Spacer()
+                        }
+
+                        HStack(spacing: 8) {
+                            if case .warning = claudeConfigManager.status {
+                                Button("Auto-Configure") {
+                                    claudeConfigManager.addConfiguration()
+                                }
+                                .buttonStyle(.borderedProminent)
+                            }
+
+                            Button("Copy Configuration") {
+                                NSPasteboard.general.clearContents()
+                                NSPasteboard.general.setString(claudeConfigManager.mcpConfiguration, forType: .string)
+                            }
+
+                            Button("Refresh Status") {
+                                claudeConfigManager.checkConfiguration()
+                            }
+
+                            Spacer()
+                        }
+
+                        Text("Auto-configure Claude Desktop or copy configuration manually")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
             .formStyle(.grouped)
-            
+
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(NSColor.windowBackgroundColor))
         .onAppear {
             loadApiKeyFromKeychain()
+            claudeConfigManager.checkConfiguration()
         }
     }
-    
+
     private func testConnection() async {
         isTestingConnection = true
         testResult = nil
-        
+
         do {
             let apiKey = aiApiKey.isEmpty ? "test-key" : aiApiKey
             let openAI = OpenAIService(apiURL: aiEndpoint, apiKey: apiKey)
             let testMessage = [OpenAIChatMessage(role: "user", content: "Hello")]
-            
+
             let response = try await openAI.chatCompletions(
                 model: aiModel,
                 messages: testMessage,
                 temperature: 0.7,
                 maxTokens: 10
             )
-            
+
             if let content = response.choices.first?.message.content {
                 testResult = .success("Connection successful! Response: \"\(content.prefix(50))...\"")
             } else {
@@ -244,10 +331,10 @@ struct AISettingsView: View {
                 testResult = .failure("Connection failed: \(error.localizedDescription)")
             }
         }
-        
+
         isTestingConnection = false
     }
-    
+
     private func loadApiKeyFromKeychain() {
         do {
             aiApiKey = try KeychainManager.shared.retrieve(key: "aiApiKey") ?? ""
@@ -255,7 +342,7 @@ struct AISettingsView: View {
             logger.error("Failed to load API key from keychain: \(error.localizedDescription)")
         }
     }
-    
+
     private func saveApiKeyToKeychain(_ key: String) {
         do {
             if key.isEmpty {
@@ -278,7 +365,7 @@ extension AISettingsView.TestResult {
         case .failure: return false
         }
     }
-    
+
     var message: String {
         switch self {
         case .success(let message): return message
@@ -296,13 +383,13 @@ struct ValidatedTextField: View {
     let helpText: String
     let required: Bool
     let errorMessage: String
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             TextField(text: $text, prompt: Text(placeholder)) {
                 Text(title)
             }
-            
+
             if required && text.isEmpty {
                 Text(errorMessage)
                     .font(.caption)
@@ -324,7 +411,7 @@ struct ValidatedSecureField: View {
     let errorMessage: String?
     let shouldValidate: Bool
     let validator: (String) -> Void
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             SecureField(text: $text, prompt: Text(placeholder)) {
@@ -335,7 +422,7 @@ struct ValidatedSecureField: View {
                     validator(newValue)
                 }
             }
-            
+
             if shouldValidate, let error = errorMessage {
                 Text(error)
                     .font(.caption)

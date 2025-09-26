@@ -14,32 +14,32 @@ import os
 /// All operations are queued and executed in batches to minimize database transactions.
 @MainActor
 class SessionPersistenceService {
-    
+
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "SessionPersistenceService")
-    
+
     private let modelContainer: ModelContainer
-    
+
     // MARK: - Batch Operation Queues
-    
+
     private var pendingSessions: [UsageSession] = []
-    
+
     private var pendingIcons: [(identifier: String, iconData: Data)] = []
-    
+
     /// Initializes the persistence service with the required SwiftData container.
     /// - Parameter modelContainer: SwiftData container for database operations
     init(modelContainer: ModelContainer) {
         self.modelContainer = modelContainer
     }
-    
+
     // MARK: - Public Interface
-    
+
     /// Queues a usage session for batch saving.
     /// Session will be saved on the next atomic save operation.
     /// - Parameter session: The completed usage session to save
     func queueSession(_ session: UsageSession) {
         pendingSessions.append(session)
     }
-    
+
     /// Queues icon data for batch saving if it needs updating.
     /// Performs intelligent caching to avoid unnecessary database writes.
     /// - Parameters:
@@ -50,7 +50,7 @@ class SessionPersistenceService {
             pendingIcons.append((identifier: identifier, iconData: iconData))
         }
     }
-    
+
     /// Performs an atomic save of all queued sessions and icons.
     /// Clears the queues and executes a single database transaction.
     /// Called automatically every 30 seconds by TrackingService.
@@ -60,21 +60,21 @@ class SessionPersistenceService {
         let iconsToSave = pendingIcons
         pendingSessions.removeAll()
         pendingIcons.removeAll()
-        
+
         // Execute save if we have data to persist
         if !sessionsToSave.isEmpty || !iconsToSave.isEmpty {
             await saveSessionsAndIcons(sessionsToSave, iconsToSave)
         }
     }
-    
+
     /// Saves all pending data immediately.
     /// Used during app termination to ensure no data loss.
     func saveAllActiveSessions() async {
         await performAtomicSave()
     }
-    
+
     // MARK: - Private Implementation
-    
+
     private func saveSessionsAndIcons(_ sessions: [UsageSession], _ icons: [(identifier: String, iconData: Data)]) async {
         do {
             // Execute all operations in a single database transaction
@@ -83,7 +83,7 @@ class SessionPersistenceService {
                 for session in sessions {
                     modelContainer.mainContext.insert(session)
                 }
-                
+
                 // Process icon updates and insertions
                 for iconInfo in icons {
                     let targetIdentifier = iconInfo.identifier
@@ -92,7 +92,7 @@ class SessionPersistenceService {
                             icon.identifier == targetIdentifier
                         }
                     )
-                    
+
                     let existingIcons = try modelContainer.mainContext.fetch(descriptor)
                     if let existingIcon = existingIcons.first {
                         // Update existing icon with new data and timestamp
@@ -104,32 +104,32 @@ class SessionPersistenceService {
                     }
                 }
             }
-            
+
             logger.info("Successfully saved \(sessions.count) sessions and \(icons.count) icons")
-            
+
         } catch {
             let totalItems = sessions.count + icons.count
             logger.error("Failed to save \(totalItems) items: \(error.localizedDescription)")
-            
+
             // Re-queue failed items for automatic retry on next save cycle
             pendingSessions.append(contentsOf: sessions)
             pendingIcons.append(contentsOf: icons)
         }
     }
-    
+
     private func shouldUpdateIcon(identifier: String) -> Bool {
         // Avoid duplicate queue entries for the same identifier
         if pendingIcons.contains(where: { $0.identifier == identifier }) {
             return false
         }
-        
+
         do {
             let descriptor = FetchDescriptor<Icon>(
                 predicate: #Predicate<Icon> { icon in
                     icon.identifier == identifier
                 }
             )
-            
+
             let existingIcons = try modelContainer.mainContext.fetch(descriptor)
             if let existingIcon = existingIcons.first {
                 // Update if icon is stale (older than a week) or missing data

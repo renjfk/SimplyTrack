@@ -11,7 +11,7 @@ import SwiftUI
 /// Provides organized access to general settings and AI configuration options.
 struct SettingsWindow: View {
     @State private var selectedTab = 0
-    
+
     var body: some View {
         TabView(selection: $selectedTab) {
             GeneralSettingsView()
@@ -20,14 +20,14 @@ struct SettingsWindow: View {
                     Text("General")
                 }
                 .tag(0)
-            
+
             AISettingsView()
                 .tabItem {
                     Image(systemName: "brain.head.profile")
                     Text("AI")
                 }
                 .tag(1)
-            
+
             PrivacySettingsView()
                 .tabItem {
                     Image(systemName: "lock.fill")

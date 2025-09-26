@@ -5,8 +5,8 @@
 //  Created by Soner Köksal on 11.09.2025.
 //
 
-import SwiftUI
 import Charts
+import SwiftUI
 
 /// Displays a bar chart showing weekly activity breakdown by day.
 /// Shows usage time for each day of the week with animated transitions.
@@ -15,7 +15,7 @@ struct WeeklyBarChart: View {
     let selectedDate: Date
     /// Weekly activity data mapped by day abbreviation (MON, TUE, etc.)
     let weeklyActivity: [String: TimeInterval]
-    
+
     var body: some View {
         Chart {
             ForEach(0..<7, id: \.self) { dayOffset in
@@ -25,7 +25,7 @@ struct WeeklyBarChart: View {
                 let dayName = calendar.shortWeekdaySymbols[calendar.component(.weekday, from: dayDate) - 1]
                 let dayKey = String(dayName.prefix(3)).uppercased()
                 let totalTime = weeklyActivity[dayKey] ?? 0
-                
+
                 BarMark(
                     x: .value("Day", dayKey),
                     y: .value("Time", totalTime)
@@ -50,7 +50,7 @@ struct WeeklyBarChart: View {
             let maxValue = weeklyActivity.values.max() ?? 43200
             let stepSize = maxValue / 4
             let axisValues = stride(from: 0.0, through: Double(maxValue), by: Double(stepSize)).map { $0 }
-            
+
             AxisMarks(values: axisValues) { value in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 1))
                     .foregroundStyle(Color(NSColor.separatorColor))
