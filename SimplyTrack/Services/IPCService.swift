@@ -52,7 +52,7 @@ class IPCService: NSObject, SimplyTrackIPCProtocol {
     }
 
     func getVersion(completion: @escaping (String) -> Void) {
-        Task { @MainActor in
+        DispatchQueue.main.async {
             let version = UpdateManager.shared.getCurrentVersion()
             completion(version)
         }
