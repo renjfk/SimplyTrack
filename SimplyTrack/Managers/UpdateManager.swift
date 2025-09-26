@@ -71,9 +71,6 @@ enum UpdateError: LocalizedError {
     case checksumAssetNotFound
     case downloadFailed
     case checksumValidationFailed
-    case mountFailed
-    case replacementFailed
-    case cleanupFailed
     case invalidVersion
 
     var errorDescription: String? {
@@ -92,12 +89,6 @@ enum UpdateError: LocalizedError {
             return "Failed to download update"
         case .checksumValidationFailed:
             return "Downloaded file failed checksum validation"
-        case .mountFailed:
-            return "Failed to mount DMG"
-        case .replacementFailed:
-            return "Failed to replace application"
-        case .cleanupFailed:
-            return "Failed to cleanup temporary files"
         case .invalidVersion:
             return "Invalid version format"
         }
@@ -122,35 +113,6 @@ class UpdateManager: ObservableObject {
     private let githubAllReleasesURL = "https://api.github.com/repos/renjfk/SimplyTrack/releases"
 
     private init() {}
-
-    private func executeCommand(
-        executable: String,
-        arguments: [String],
-        workingDirectory: URL? = nil
-    ) async throws -> (output: String, error: String, status: Int32) {
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: executable)
-        task.arguments = arguments
-
-        if let workingDirectory = workingDirectory {
-            task.currentDirectoryURL = workingDirectory
-        }
-
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-        task.standardOutput = outputPipe
-        task.standardError = errorPipe
-
-        try task.run()
-        task.waitUntilExit()
-
-        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-        let output = String(data: outputData, encoding: .utf8) ?? ""
-        let error = String(data: errorData, encoding: .utf8) ?? ""
-
-        return (output: output, error: error, status: task.terminationStatus)
-    }
 
     /// Gets the current app version from the bundle info.
     /// - Returns: Version string from CFBundleShortVersionString, "0.0" if not found

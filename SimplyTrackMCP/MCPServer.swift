@@ -17,21 +17,19 @@ actor MCPServer {
         let connection = NSXPCConnection(machServiceName: "com.renjfk.SimplyTrack")
         connection.remoteObjectInterface = NSXPCInterface(with: SimplyTrackIPCProtocol.self)
         connection.resume()
-        return connection.remoteObjectProxy as! SimplyTrackIPCProtocol
+        return connection.remoteObjectProxyWithErrorHandler { error in
+            // Fast fail - write error to stdout and exit immediately
+            print("ERROR: XPC connection failed: \(error.localizedDescription)")
+            fflush(stdout)
+            exit(1)
+        } as! SimplyTrackIPCProtocol
     }()
 
     /// Runs the MCP stdio server using the official MCP SDK
     func run() async throws {
         logger.error("Starting SimplyTrack MCP server...")
 
-        // Get version from main app (this also checks if it's running)
-        let version: String
-        do {
-            version = try await getVersion()
-        } catch {
-            logger.error("Main SimplyTrack app is not running")
-            throw MCPServerError.mainAppNotRunning
-        }
+        let version = try await getVersion()
 
         // Create server with capabilities according to the SDK documentation
         let server = Server(
@@ -220,21 +218,6 @@ actor MCPServer {
             ipcService.getVersion { version in
                 continuation.resume(returning: version)
             }
-        }
-    }
-}
-
-/// Errors for MCP server
-enum MCPServerError: LocalizedError {
-    case mainAppNotRunning
-    case ipcConnectionFailed(Error)
-
-    var errorDescription: String? {
-        switch self {
-        case .mainAppNotRunning:
-            return "SimplyTrack main application is not running. Please start the app first."
-        case .ipcConnectionFailed(let error):
-            return "Failed to connect to SimplyTrack app: \(error.localizedDescription)"
         }
     }
 }

@@ -13,6 +13,10 @@
 	<array>
 		<string>com.renjfk.SimplyTrack</string>
 	</array>
+	<key>com.apple.security.temporary-exception.mach-register.global-name</key>
+	<array>
+		<string>com.renjfk.SimplyTrack</string>
+	</array>
 	<key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
 	<array>
 		<string>/Library/</string>
