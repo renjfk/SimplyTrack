@@ -10,7 +10,9 @@
 
 A simple, elegant macOS productivity tracking app that helps you monitor your application and website usage patterns.
 
-![Demo Video](https://github.com/user-attachments/assets/f6a87477-df34-4151-8bb4-3e2a24addc2c)
+| App Overview | MCP Demo with Claude Desktop |
+|:---:|:---:|
+| ![App Overview](Screenshots/Screen_recording_1.gif) | ![MCP Demo with Claude Desktop](Screenshots/Screen_recording_2.gif) |
 
 | Daily Activity View with Bar Chart | Daily Activity View with Pie Chart |
 |:---:|:---:|
@@ -40,6 +42,7 @@ insights without the bloat.
 - **📊 App & Website Tracking** - Monitor time spent in applications and websites (Safari, Chrome, Edge supported)
 - **📈 Visual Analytics** - Charts showing daily/weekly activity patterns
 - **🔔 Smart Notifications** - Optional AI-powered daily summary notifications with usage insights
+- **🤖 AI Integration** - Built-in MCP server for seamless integration with Claude and other AI assistants
 - **🔒 Privacy-First** - All data stored locally, secure keychain storage for API keys, optional private browsing tracking
 - **🚀 Menu Bar Interface** - Clean popover UI, native macOS integration
 - **🔍 Smart Detection** - Automatic idle detection, session management, and private browsing detection
@@ -97,6 +100,37 @@ SimplyTrack requires several macOS permissions to function properly:
 
 The app provides helpful banners and direct links to the appropriate system preference panes when permissions are
 needed.
+
+## 🤖 AI Integration (MCP)
+
+SimplyTrack includes a built-in **Model Context Protocol (MCP) server** that allows AI assistants like Claude to access your usage data for insights and analysis.
+
+### Features
+
+- **Usage Data Access**: AI assistants can retrieve your app/website usage statistics
+- **Smart Analysis**: Get personalized productivity insights from your data
+- **Privacy-Focused**: Data never leaves your machine - AI connects directly to your local SimplyTrack instance
+- **Easy Setup**: One-click configuration for Claude Desktop
+
+### Setup with Claude Desktop
+
+1. Open SimplyTrack Settings → AI tab
+2. In the "AI Tool Integration" section, click **"Auto-Configure"**
+3. Select your Claude Desktop configuration file when prompted
+4. Restart Claude Desktop to activate the integration
+
+### Available Tools
+
+- **`get_usage_activity`** - Retrieve detailed usage statistics for any date
+  - Filter by applications or websites
+  - Customize time ranges and top activity percentages
+  - Get formatted data perfect for AI analysis
+
+### Example Usage
+
+Ask Claude: *"What were my top 3 most used apps yesterday?"* or *"Analyze my productivity patterns this week"*
+
+The MCP server provides real-time access to your usage data while maintaining complete privacy and control.
 
 ## Contributing
 

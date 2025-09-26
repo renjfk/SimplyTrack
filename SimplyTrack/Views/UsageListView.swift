@@ -10,14 +10,14 @@ import SwiftUI
 enum UsageListType {
     case apps
     case websites
-    
+
     var title: String {
         switch self {
         case .apps: return "Apps"
         case .websites: return "Websites"
         }
     }
-    
+
     var iconType: (String, String, Data?) -> IconView.IconType {
         switch self {
         case .apps:
@@ -26,7 +26,7 @@ enum UsageListType {
             return { _, name, iconData in .website(domain: name, iconData: iconData) }
         }
     }
-    
+
     var iconSize: CGFloat {
         switch self {
         case .apps: return 25
@@ -44,11 +44,11 @@ struct UsageListView: View {
     let items: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)]
     /// Controls whether to show all items or just top 5
     @Binding var showAllItems: Bool
-    
+
     private var displayedItems: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)] {
         showAllItems ? items : Array(items.prefix(5))
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -77,10 +77,12 @@ struct UsageListView: View {
 
                         Text(item.totalTime.formattedDuration)
                     }
-                    .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .move(edge: .top)),
-                        removal: .opacity.combined(with: .move(edge: .top))
-                    ))
+                    .transition(
+                        .asymmetric(
+                            insertion: .opacity.combined(with: .move(edge: .top)),
+                            removal: .opacity.combined(with: .move(edge: .top))
+                        )
+                    )
                 }
             }
         }

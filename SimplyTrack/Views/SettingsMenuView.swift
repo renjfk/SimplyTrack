@@ -5,8 +5,8 @@
 //  Created by Soner Köksal on 04.09.2025.
 //
 
-import SwiftUI
 import ServiceManagement
+import SwiftUI
 
 /// Dropdown settings menu providing access to app preferences and actions.
 /// Includes about panel, preferences, data clearing, update checking, and quit functionality.
@@ -14,26 +14,28 @@ import ServiceManagement
 struct SettingsMenuView: View {
     @State private var showingUpdateAlert = false
     @State private var updateError: UpdateError?
-    
+    @Environment(\.openSettings) private var openSettings
+
     /// Current view mode for contextual data clearing
     let viewMode: ContentView.ViewMode
     /// Controls display of data clearing confirmation dialog
     @Binding var showingClearDataConfirmation: Bool
-    
+
     var body: some View {
         Menu {
             Button("About SimplyTrack") {
                 NSApp.orderFrontStandardAboutPanel(nil)
             }
-            
+
             Divider()
 
-            SettingsLink {
-                Text("Preferences...")
+            Button("Preferences...") {
+                NSApp.activate(ignoringOtherApps: true)
+                openSettings()
             }
-            
+
             Divider()
-            
+
             Button(action: {
                 showingClearDataConfirmation = true
             }) {
@@ -44,7 +46,7 @@ struct SettingsMenuView: View {
                         .foregroundColor(.red)
                 }
             }
-            
+
             Button(action: {
                 Task {
                     await checkForUpdates()
@@ -54,9 +56,9 @@ struct SettingsMenuView: View {
                     Text("Check for Updates")
                 }
             }
-            
+
             Divider()
-            
+
             Button("Quit SimplyTrack") {
                 NSApplication.shared.terminate(nil)
             }
@@ -82,7 +84,7 @@ struct SettingsMenuView: View {
             Text("You are already running the latest version of SimplyTrack.")
         }
     }
-    
+
     private func checkForUpdates() async {
         do {
             let hasUpdate = try await UpdateManager.shared.checkForUpdates(ignoreLastUpdate: true)

@@ -6,7 +6,20 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		F518923E2E85F106002B266C /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = F518923D2E85F106002B266C /* MCP */; };
+		F51892552E85F7F6002B266C /* SimplyTrackMCP in CopyFiles */ = {isa = PBXBuildFile; fileRef = F51892322E85F09B002B266C /* SimplyTrackMCP */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		F5781DD92E86627400162336 /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = F56AE1FF2E81ECF4004FD6FE /* MCP */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
+		F51892562E85F828002B266C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F553B4182E5F96870053406B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F51892312E85F09B002B266C;
+			remoteInfo = SimplyTrackMCP;
+		};
 		F553B42F2E5F968C0053406B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = F553B4182E5F96870053406B /* Project object */;
@@ -23,7 +36,30 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		F51892302E85F09B002B266C /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		F51892542E85F7E0002B266C /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 6;
+			files = (
+				F51892552E85F7F6002B266C /* SimplyTrackMCP in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		F51892322E85F09B002B266C /* SimplyTrackMCP */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SimplyTrackMCP; sourceTree = BUILT_PRODUCTS_DIR; };
 		F553B4202E5F96870053406B /* SimplyTrack.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SimplyTrack.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F553B42E2E5F968C0053406B /* SimplyTrackTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SimplyTrackTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F553B4382E5F968C0053406B /* SimplyTrackUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SimplyTrackUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -40,6 +76,11 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		F51892332E85F09B002B266C /* SimplyTrackMCP */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SimplyTrackMCP;
+			sourceTree = "<group>";
+		};
 		F553B4222E5F96870053406B /* SimplyTrack */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -61,10 +102,19 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		F518922F2E85F09B002B266C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F518923E2E85F106002B266C /* MCP in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		F553B41D2E5F96870053406B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F5781DD92E86627400162336 /* MCP in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -91,6 +141,8 @@
 				F553B4222E5F96870053406B /* SimplyTrack */,
 				F553B4312E5F968C0053406B /* SimplyTrackTests */,
 				F553B43B2E5F968C0053406B /* SimplyTrackUITests */,
+				F51892332E85F09B002B266C /* SimplyTrackMCP */,
+				F56646D62E843D8700FDEC78 /* Frameworks */,
 				F553B4212E5F96870053406B /* Products */,
 			);
 			sourceTree = "<group>";
@@ -101,13 +153,44 @@
 				F553B4202E5F96870053406B /* SimplyTrack.app */,
 				F553B42E2E5F968C0053406B /* SimplyTrackTests.xctest */,
 				F553B4382E5F968C0053406B /* SimplyTrackUITests.xctest */,
+				F51892322E85F09B002B266C /* SimplyTrackMCP */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		F56646D62E843D8700FDEC78 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		F51892312E85F09B002B266C /* SimplyTrackMCP */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F51892362E85F09B002B266C /* Build configuration list for PBXNativeTarget "SimplyTrackMCP" */;
+			buildPhases = (
+				F518922E2E85F09B002B266C /* Sources */,
+				F518922F2E85F09B002B266C /* Frameworks */,
+				F51892302E85F09B002B266C /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F51892332E85F09B002B266C /* SimplyTrackMCP */,
+			);
+			name = SimplyTrackMCP;
+			packageProductDependencies = (
+				F518923D2E85F106002B266C /* MCP */,
+			);
+			productName = SimplyTrackMCP;
+			productReference = F51892322E85F09B002B266C /* SimplyTrackMCP */;
+			productType = "com.apple.product-type.tool";
+		};
 		F553B41F2E5F96870053406B /* SimplyTrack */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = F553B4422E5F968C0053406B /* Build configuration list for PBXNativeTarget "SimplyTrack" */;
@@ -115,16 +198,19 @@
 				F553B41C2E5F96870053406B /* Sources */,
 				F553B41D2E5F96870053406B /* Frameworks */,
 				F553B41E2E5F96870053406B /* Resources */,
+				F51892542E85F7E0002B266C /* CopyFiles */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				F51892572E85F828002B266C /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				F553B4222E5F96870053406B /* SimplyTrack */,
 			);
 			name = SimplyTrack;
 			packageProductDependencies = (
+				F56AE1FF2E81ECF4004FD6FE /* MCP */,
 			);
 			productName = SimplyTrack;
 			productReference = F553B4202E5F96870053406B /* SimplyTrack.app */;
@@ -183,9 +269,12 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1640;
-				LastUpgradeCheck = 1640;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
 				TargetAttributes = {
+					F51892312E85F09B002B266C = {
+						CreatedOnToolsVersion = 26.0;
+					};
 					F553B41F2E5F96870053406B = {
 						CreatedOnToolsVersion = 16.4;
 					};
@@ -208,6 +297,9 @@
 			);
 			mainGroup = F553B4172E5F96870053406B;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				F518923A2E85F0F2002B266C /* XCRemoteSwiftPackageReference "swift-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F553B4212E5F96870053406B /* Products */;
 			projectDirPath = "";
@@ -216,6 +308,7 @@
 				F553B41F2E5F96870053406B /* SimplyTrack */,
 				F553B42D2E5F968C0053406B /* SimplyTrackTests */,
 				F553B4372E5F968C0053406B /* SimplyTrackUITests */,
+				F51892312E85F09B002B266C /* SimplyTrackMCP */,
 			);
 		};
 /* End PBXProject section */
@@ -245,6 +338,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		F518922E2E85F09B002B266C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		F553B41C2E5F96870053406B /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -269,6 +369,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		F51892572E85F828002B266C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F51892312E85F09B002B266C /* SimplyTrackMCP */;
+			targetProxy = F51892562E85F828002B266C /* PBXContainerItemProxy */;
+		};
 		F553B4302E5F968C0053406B /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = F553B41F2E5F96870053406B /* SimplyTrack */;
@@ -282,6 +387,36 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		F51892372E85F09B002B266C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = WD9D8KHH6Y;
+				ENABLE_HARDENED_RUNTIME = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				PRODUCT_BUNDLE_IDENTIFIER = com.renjfk.SimplyTrackMCP;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		F51892382E85F09B002B266C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = WD9D8KHH6Y;
+				ENABLE_HARDENED_RUNTIME = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				PRODUCT_BUNDLE_IDENTIFIER = com.renjfk.SimplyTrackMCP;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 		F553B4402E5F968C0053406B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -316,6 +451,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = WD9D8KHH6Y;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -341,6 +477,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -380,6 +517,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = WD9D8KHH6Y;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -398,6 +536,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
 			name = Release;
@@ -408,13 +547,18 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				AUTOMATION_APPLE_EVENTS = YES;
 				CODE_SIGN_ENTITLEMENTS = SimplyTrack/SimplyTrack.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 0;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = WD9D8KHH6Y;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_FILE_ACCESS_DOWNLOADS_FOLDER = readwrite;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SimplyTrack/Info.plist;
@@ -439,13 +583,18 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				AUTOMATION_APPLE_EVENTS = YES;
 				CODE_SIGN_ENTITLEMENTS = SimplyTrack/SimplyTrack.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 0;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = WD9D8KHH6Y;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_FILE_ACCESS_DOWNLOADS_FOLDER = readwrite;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SimplyTrack/Info.plist;
@@ -470,6 +619,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 42;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = WD9D8KHH6Y;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.5;
@@ -488,6 +638,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 42;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = WD9D8KHH6Y;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.5;
@@ -505,6 +656,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 42;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = WD9D8KHH6Y;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 0.0;
@@ -521,6 +673,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 42;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = WD9D8KHH6Y;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 0.0;
@@ -535,6 +688,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		F51892362E85F09B002B266C /* Build configuration list for PBXNativeTarget "SimplyTrackMCP" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F51892372E85F09B002B266C /* Debug */,
+				F51892382E85F09B002B266C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		F553B41B2E5F96870053406B /* Build configuration list for PBXProject "SimplyTrack" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -572,6 +734,29 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		F518923A2E85F0F2002B266C /* XCRemoteSwiftPackageReference "swift-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/modelcontextprotocol/swift-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.10.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F518923D2E85F106002B266C /* MCP */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F518923A2E85F0F2002B266C /* XCRemoteSwiftPackageReference "swift-sdk" */;
+			productName = MCP;
+		};
+		F56AE1FF2E81ECF4004FD6FE /* MCP */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MCP;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = F553B4182E5F96870053406B /* Project object */;
 }

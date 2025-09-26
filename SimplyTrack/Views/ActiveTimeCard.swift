@@ -26,7 +26,7 @@ struct ActiveTimeCard: View {
     let weeklyTopApps: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)]
     /// Current chart page (0: timeline/bar, 1: pie chart)
     @Binding var currentPage: Int
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -50,7 +50,7 @@ struct ActiveTimeCard: View {
                 .stroke(Color(NSColor.separatorColor), lineWidth: 1)
         )
     }
-    
+
     private var dailyPageView: some View {
         VStack(spacing: 8) {
             Picker(selection: $currentPage, label: EmptyView()) {
@@ -62,7 +62,7 @@ struct ActiveTimeCard: View {
             .pickerStyle(.segmented)
             .frame(width: 80)
             .fixedSize()
-            
+
             Group {
                 if currentPage == 0 {
                     HourlyTimelineChart(
@@ -80,7 +80,7 @@ struct ActiveTimeCard: View {
         }
         .frame(height: 120)
     }
-    
+
     private var weeklyPageView: some View {
         VStack(spacing: 8) {
             Picker(selection: $currentPage, label: EmptyView()) {
@@ -92,7 +92,7 @@ struct ActiveTimeCard: View {
             .pickerStyle(.segmented)
             .frame(width: 80)
             .fixedSize()
-            
+
             Group {
                 if currentPage == 0 {
                     WeeklyBarChart(

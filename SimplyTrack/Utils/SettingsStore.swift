@@ -13,15 +13,15 @@ struct AppStorageDefaults {
     /// Default prompt template for AI-generated daily summary notifications.
     /// Contains placeholders for app and website usage data replacement.
     static let summaryNotificationPrompt = """
-Create a concise daily summary notification (100-150 chars max). Use emojis and friendly tone. No markdown formatting.
+        Create a concise daily summary notification (100-150 chars max). Use emojis and friendly tone. No markdown formatting.
 
-Usage overview:
-Apps: {appSummary}
-Sites: {websiteSummary}
+        Usage overview:
+        Apps: {appSummary}
+        Sites: {websiteSummary}
 
-Focus on key insights and productivity patterns. Make it encouraging and actionable.
-"""
-    
+        Focus on key insights and productivity patterns. Make it encouraging and actionable.
+        """
+
     /// Default notification time set to 9:00 AM as TimeInterval since epoch.
     /// Used for scheduling daily summary notifications.
     static let summaryNotificationTime: Double = {
@@ -29,7 +29,7 @@ Focus on key insights and productivity patterns. Make it encouraging and actiona
         let components = DateComponents(hour: 9, minute: 0)
         return calendar.date(from: components)?.timeIntervalSince1970 ?? 0
     }()
-    
+
     /// Default private browsing tracking preference.
     /// Privacy-first approach: disabled by default to protect user privacy.
     static let trackPrivateBrowsing = false
@@ -40,10 +40,10 @@ Focus on key insights and productivity patterns. Make it encouraging and actiona
 extension UserDefaults {
     static let app: UserDefaults = {
         #if DEBUG
-        let bundleId = Bundle.main.bundleIdentifier!
-        return UserDefaults(suiteName: "\(bundleId).debug") ?? UserDefaults.standard
+            let bundleId = Bundle.main.bundleIdentifier!
+            return UserDefaults(suiteName: "\(bundleId).debug") ?? UserDefaults.standard
         #else
-        return UserDefaults.standard
+            return UserDefaults.standard
         #endif
     }()
 }

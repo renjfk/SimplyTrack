@@ -7,9 +7,9 @@
 //
 
 import Foundation
-import UserNotifications
 import SwiftData
 import SwiftUI
+import UserNotifications
 import os
 
 /// Service responsible for managing user notifications and AI-powered usage summaries.
@@ -18,22 +18,21 @@ import os
 @MainActor
 class NotificationService: NSObject, UNUserNotificationCenterDelegate {
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "NotificationService")
-    
+
     // MARK: - Dependencies
-    
+
     private let modelContainer: ModelContainer
     private weak var appDelegate: AppDelegate?
-    
-    
+
     // MARK: - Settings
-    
+
     @AppStorage("summaryNotificationsEnabled", store: .app) private var summaryNotificationsEnabled = false
     @AppStorage("aiEndpoint", store: .app) private var aiEndpoint = ""
     @AppStorage("aiModel", store: .app) private var aiModel = ""
     @AppStorage("summaryNotificationPrompt", store: .app) private var summaryNotificationPrompt = AppStorageDefaults.summaryNotificationPrompt
     @AppStorage("summaryNotificationTime", store: .app) private var summaryNotificationTime: Double = AppStorageDefaults.summaryNotificationTime
     @AppStorage("lastDailySummaryNotification", store: .app) private var lastDailySummaryNotification: Double = 0
-    
+
     /// Initializes the notification service with required dependencies.
     /// - Parameters:
     ///   - modelContainer: SwiftData container for accessing usage data
@@ -43,16 +42,16 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
         self.appDelegate = appDelegate
         super.init()
     }
-    
+
     // MARK: - Public Interface
-    
+
     /// Sets up notification permissions and categories.
     /// Requests user authorization for notifications and configures notification categories.
     /// Updates app delegate state if permission is denied.
     func setupNotifications() {
         let center = UNUserNotificationCenter.current()
         center.delegate = self
-        
+
         Task {
             do {
                 let granted = try await center.requestAuthorization(options: [.alert, .sound])
@@ -63,17 +62,17 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
                 appDelegate?.notificationPermissionDenied = true
             }
         }
-        
+
         let updateCategory = UNNotificationCategory(
             identifier: NotificationConstants.updateCategoryIdentifier,
             actions: [],
             intentIdentifiers: [],
             options: []
         )
-        
+
         center.setNotificationCategories([updateCategory])
     }
-    
+
     /// Starts the notification scheduler that checks for daily summary notifications.
     /// Creates a timer that runs every 5 minutes to check if it's time to send the daily notification.
     func startNotificationScheduler() {
@@ -83,52 +82,49 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
             }
         }
     }
-    
-    
+
     // MARK: - Daily Summary Logic
-    
+
     private func checkForDailyNotification() async {
         // Validate that all required settings are configured
-        guard summaryNotificationsEnabled && 
-              !aiEndpoint.isEmpty && 
-              !aiModel.isEmpty && 
-              !summaryNotificationPrompt.isEmpty else {
+        guard summaryNotificationsEnabled && !aiEndpoint.isEmpty && !aiModel.isEmpty && !summaryNotificationPrompt.isEmpty else {
             return
         }
-        
+
         let now = Date()
         let calendar = Calendar.current
         let scheduledTime = Date(timeIntervalSince1970: summaryNotificationTime)
-        let todayScheduledTime = calendar.date(
-            bySettingHour: calendar.component(.hour, from: scheduledTime),
-            minute: calendar.component(.minute, from: scheduledTime),
-            second: 0,
-            of: now
-        ) ?? now
-        
+        let todayScheduledTime =
+            calendar.date(
+                bySettingHour: calendar.component(.hour, from: scheduledTime),
+                minute: calendar.component(.minute, from: scheduledTime),
+                second: 0,
+                of: now
+            ) ?? now
+
         // Ensure we've reached the scheduled notification time
         guard now >= todayScheduledTime else { return }
-        
+
         // Prevent sending duplicate notifications on the same day
         let lastNotificationDate = Date(timeIntervalSince1970: lastDailySummaryNotification)
         if lastDailySummaryNotification > 0 && calendar.isDate(lastNotificationDate, inSameDayAs: now) {
             return
         }
-        
+
         // Generate AI summary and send notification
         await sendDailySummaryNotification()
-        
+
         // Record notification timestamp to prevent duplicates
         lastDailySummaryNotification = now.timeIntervalSince1970
     }
-    
+
     private func sendDailySummaryNotification() async {
         // Calculate yesterday's date for usage aggregation
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
-        
+
         let appSummary: String
         let websiteSummary: String
-        
+
         do {
             appSummary = try UsageAggregator.aggregateUsage(
                 for: yesterday,
@@ -136,7 +132,7 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
                 topPercentage: 0.8,
                 modelContext: modelContainer.mainContext
             )
-            
+
             websiteSummary = try UsageAggregator.aggregateUsage(
                 for: yesterday,
                 type: .website,
@@ -147,12 +143,13 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
             logger.error("Failed to aggregate usage data: \(error.localizedDescription)")
             return
         }
-        
+
         // Substitute usage data into the user's prompt template
-        let fullPrompt = summaryNotificationPrompt
+        let fullPrompt =
+            summaryNotificationPrompt
             .replacingOccurrences(of: "{appSummary}", with: appSummary)
             .replacingOccurrences(of: "{websiteSummary}", with: websiteSummary)
-        
+
         do {
             // Retrieve AI service API key from secure keychain storage
             let apiKey = try KeychainManager.shared.retrieve(key: "aiApiKey") ?? ""
@@ -160,7 +157,7 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
                 logger.error("API key not found in keychain for daily summary")
                 return
             }
-            
+
             // Generate AI summary using configured endpoint and model
             let openAI = OpenAIService(apiURL: aiEndpoint, apiKey: apiKey)
             let messages = [OpenAIChatMessage(role: "user", content: fullPrompt)]
@@ -170,7 +167,7 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
                 temperature: 0.7,
                 maxTokens: 300
             )
-            
+
             // Create and deliver notification with AI-generated summary
             if let aiSummary = response.choices.first?.message.content {
                 let content = UNMutableNotificationContent()
@@ -178,27 +175,27 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
                 content.body = aiSummary
                 content.sound = UNNotificationSound.default
                 content.userInfo = ["summaryDate": yesterday.timeIntervalSince1970]
-                
+
                 let request = UNNotificationRequest(
                     identifier: "daily-summary",
                     content: content,
                     trigger: nil
                 )
-                
+
                 try await UNUserNotificationCenter.current().add(request)
             }
         } catch {
             logger.error("Failed to generate daily summary: \(error.localizedDescription)")
         }
     }
-    
+
     // MARK: - UNUserNotificationCenterDelegate
-    
+
     /// Handles user interactions with notifications.
     /// Routes daily summary taps to show usage data for the relevant date,
     /// and update notifications to download and install new versions.
     /// - Parameter response: User's response to the notification
-    
+
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
         switch response.actionIdentifier {
         case UNNotificationDefaultActionIdentifier:
@@ -225,7 +222,7 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
             break
         }
     }
-    
+
     /// Determines how notifications should be presented when the app is active.
     /// - Returns: Presentation options allowing banner and sound
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {

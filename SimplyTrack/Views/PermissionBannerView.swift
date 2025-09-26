@@ -23,7 +23,7 @@ struct PermissionBannerView: View {
     let dismissAction: (() -> Void)?
     /// Accent color for the banner (affects border, background, and icon)
     let color: Color
-    
+
     /// Creates a permission banner with specified content and styling
     /// - Parameters:
     ///   - title: Banner title text
@@ -47,7 +47,7 @@ struct PermissionBannerView: View {
         self.dismissAction = dismissAction
         self.color = color
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -56,7 +56,7 @@ struct PermissionBannerView: View {
                 Text(title)
                     .font(.headline)
                 Spacer()
-                
+
                 if let dismissAction = dismissAction {
                     Button("Dismiss") {
                         dismissAction()
@@ -65,11 +65,11 @@ struct PermissionBannerView: View {
                     .controlSize(.small)
                 }
             }
-            
+
             Text(message)
                 .font(.caption)
                 .foregroundColor(.secondary)
-            
+
             HStack {
                 Spacer()
                 Button(primaryButtonTitle) {

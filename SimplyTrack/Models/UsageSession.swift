@@ -25,14 +25,14 @@ class UsageSession {
     var startTime: Date
     /// When this usage session ended (nil for active sessions)
     var endTime: Date?
-    
+
     /// Calculated duration of this usage session in seconds.
     /// Returns 0 for active sessions (endTime is nil).
     var duration: TimeInterval {
         guard let endTime = endTime else { return 0 }
         return endTime.timeIntervalSince(startTime)
     }
-    
+
     /// Creates a new usage session starting at the specified time.
     /// - Parameters:
     ///   - type: Whether this tracks an app or website
@@ -47,7 +47,7 @@ class UsageSession {
         self.startTime = startTime
         self.endTime = nil
     }
-    
+
     /// Marks this usage session as ended at the specified time.
     /// - Parameter endTime: When the session ended (defaults to now)
     func endSession(at endTime: Date = Date()) {
