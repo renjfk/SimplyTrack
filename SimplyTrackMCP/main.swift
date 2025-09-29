@@ -7,17 +7,16 @@
 //
 
 import Foundation
-import os
 
 // Start the MCP stdio server immediately
 Task {
-    let server = MCPServer()
-
     do {
+        let server = try MCPServer()
         try await server.run()
     } catch {
-        let logger = Logger(subsystem: "com.renjfk.SimplyTrackMCP", category: "Main")
-        logger.error("MCP server failed: \(error.localizedDescription)")
+        // Print error to stderr so it's visible to users
+        fputs("ERROR: \(error.localizedDescription)\n", stderr)
+        fflush(stderr)
         exit(1)
     }
 }

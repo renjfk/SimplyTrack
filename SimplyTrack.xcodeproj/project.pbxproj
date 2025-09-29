@@ -10,6 +10,8 @@
 		F518923E2E85F106002B266C /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = F518923D2E85F106002B266C /* MCP */; };
 		F51892552E85F7F6002B266C /* SimplyTrackMCP in CopyFiles */ = {isa = PBXBuildFile; fileRef = F51892322E85F09B002B266C /* SimplyTrackMCP */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		F5781DD92E86627400162336 /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = F56AE1FF2E81ECF4004FD6FE /* MCP */; };
+		F59F14D72E88A42700740CF3 /* NIO in Frameworks */ = {isa = PBXBuildFile; productRef = F59F14D62E88A42700740CF3 /* NIO */; };
+		F59F14D92E88A42C00740CF3 /* NIO in Frameworks */ = {isa = PBXBuildFile; productRef = F59F14D82E88A42C00740CF3 /* NIO */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -107,6 +109,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F518923E2E85F106002B266C /* MCP in Frameworks */,
+				F59F14D92E88A42C00740CF3 /* NIO in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -115,6 +118,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F5781DD92E86627400162336 /* MCP in Frameworks */,
+				F59F14D72E88A42700740CF3 /* NIO in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -186,6 +190,7 @@
 			name = SimplyTrackMCP;
 			packageProductDependencies = (
 				F518923D2E85F106002B266C /* MCP */,
+				F59F14D82E88A42C00740CF3 /* NIO */,
 			);
 			productName = SimplyTrackMCP;
 			productReference = F51892322E85F09B002B266C /* SimplyTrackMCP */;
@@ -211,6 +216,7 @@
 			name = SimplyTrack;
 			packageProductDependencies = (
 				F56AE1FF2E81ECF4004FD6FE /* MCP */,
+				F59F14D62E88A42700740CF3 /* NIO */,
 			);
 			productName = SimplyTrack;
 			productReference = F553B4202E5F96870053406B /* SimplyTrack.app */;
@@ -299,6 +305,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				F518923A2E85F0F2002B266C /* XCRemoteSwiftPackageReference "swift-sdk" */,
+				F59F14D52E88A40100740CF3 /* XCRemoteSwiftPackageReference "swift-nio" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F553B4212E5F96870053406B /* Products */;
@@ -568,8 +575,17 @@
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_FILE_ACCESS_DOWNLOADS_FOLDER = readwrite;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SimplyTrack/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -605,8 +621,17 @@
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_FILE_ACCESS_DOWNLOADS_FOLDER = readwrite;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SimplyTrack/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -756,6 +781,14 @@
 				minimumVersion = 0.10.2;
 			};
 		};
+		F59F14D52E88A40100740CF3 /* XCRemoteSwiftPackageReference "swift-nio" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-nio.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.86.2;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -767,6 +800,16 @@
 		F56AE1FF2E81ECF4004FD6FE /* MCP */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = MCP;
+		};
+		F59F14D62E88A42700740CF3 /* NIO */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F59F14D52E88A40100740CF3 /* XCRemoteSwiftPackageReference "swift-nio" */;
+			productName = NIO;
+		};
+		F59F14D82E88A42C00740CF3 /* NIO */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F59F14D52E88A40100740CF3 /* XCRemoteSwiftPackageReference "swift-nio" */;
+			productName = NIO;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

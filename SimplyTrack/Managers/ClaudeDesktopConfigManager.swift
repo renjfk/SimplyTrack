@@ -60,24 +60,36 @@ class ClaudeDesktopConfigManager: ObservableObject {
         let bundlePath = Bundle.main.bundlePath
         let mcpPath = bundlePath + "/Contents/MacOS/SimplyTrackMCP"
 
+        // Use static socket path from IPCServiceManager
+        let socketPath = IPCServiceManager.socketPath
+
         return """
             {
               "mcpServers": {
                 "simplytrack": {
-                  "command": "\(mcpPath)"
+                  "command": "\(mcpPath)",
+                  "env": {
+                    "SIMPLYTRACK_SOCKET_PATH": "\(socketPath)"
+                  }
                 }
               }
             }
             """
     }
 
+    /// Checks if Claude Desktop is properly configured with SimplyTrack MCP server
+    ///
+    /// This method validates that the Claude Desktop configuration file contains the correct
+    /// MCP server configuration for SimplyTrack, including the proper command path and
+    /// socket path environment variable. Updates the `status` property with the result.
+    ///
+    /// - Sets status to `.success` if configuration matches exactly
+    /// - Sets status to `.warning` if configuration is missing or needs update
     func checkConfiguration() {
-        // Try direct access first (read-only should work with new entitlement)
         let configPath = claudeConfigPath
-        let fileManager = FileManager.default
 
-        guard fileManager.fileExists(atPath: configPath) else {
-            status = .warning("Not configured in Claude Desktop")
+        guard FileManager.default.fileExists(atPath: configPath) else {
+            status = .warning("Configuration mismatch - needs update")
             return
         }
 
@@ -89,26 +101,40 @@ class ClaudeDesktopConfigManager: ObservableObject {
             let configData = try Data(contentsOf: configURL)
             let configJSON = try JSONSerialization.jsonObject(with: configData) as? [String: Any] ?? [:]
 
+            // Check if configuration matches exactly what we expect
+            let expectedPath = Bundle.main.bundlePath + "/Contents/MacOS/SimplyTrackMCP"
+            let expectedSocketPath = IPCServiceManager.socketPath
+
             if let mcpServers = configJSON["mcpServers"] as? [String: Any],
                 let simplytrackConfig = mcpServers["simplytrack"] as? [String: Any],
-                let command = simplytrackConfig["command"] as? String
+                let command = simplytrackConfig["command"] as? String,
+                let env = simplytrackConfig["env"] as? [String: String],
+                command == expectedPath,
+                env["SIMPLYTRACK_SOCKET_PATH"] == expectedSocketPath
             {
-
-                // Verify the configured path matches our expected MCP binary path
-                let expectedPath = Bundle.main.bundlePath + "/Contents/MacOS/SimplyTrackMCP"
-                if command == expectedPath {
-                    status = .success("Already configured in Claude Desktop")
-                } else {
-                    status = .warning("Configuration points to different SimplyTrack version")
-                }
+                status = .success("Already configured in Claude Desktop")
             } else {
-                status = .warning("Not configured in Claude Desktop")
+                status = .warning("Configuration mismatch - needs update")
             }
         } catch {
-            status = .error("Failed to read configuration: \(error.localizedDescription)")
+            status = .warning("Configuration mismatch - needs update")
         }
     }
 
+    /// Prompts user to select Claude Desktop configuration file and adds SimplyTrack MCP configuration
+    ///
+    /// This method presents a file picker dialog allowing the user to select their Claude Desktop
+    /// configuration file. Once selected, it adds or updates the SimplyTrack MCP server configuration
+    /// with the correct command path and Unix domain socket configuration.
+    ///
+    /// The method handles:
+    /// - Opening a file picker dialog with appropriate defaults
+    /// - Merging with existing configuration if present
+    /// - Creating proper MCP server configuration with Unix domain socket support
+    /// - Updating the `status` property with the operation result
+    ///
+    /// - Sets status to `.success` if configuration is added successfully
+    /// - Sets status to `.error` if file access is denied or write fails
     func addConfiguration() {
         DispatchQueue.main.async { [weak self] in
             let openPanel = NSOpenPanel()
@@ -135,9 +161,12 @@ class ClaudeDesktopConfigManager: ObservableObject {
         let bundlePath = Bundle.main.bundlePath
         let mcpPath = bundlePath + "/Contents/MacOS/SimplyTrackMCP"
 
-        // Create the MCP configuration
+        // Create the MCP configuration with socket path environment variable
         let mcpServerConfig: [String: Any] = [
-            "command": mcpPath
+            "command": mcpPath,
+            "env": [
+                "SIMPLYTRACK_SOCKET_PATH": IPCServiceManager.socketPath
+            ],
         ]
 
         var configJSON: [String: Any] = [:]

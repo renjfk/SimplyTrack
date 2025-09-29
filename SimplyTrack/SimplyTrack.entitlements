@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
 	<key>com.apple.security.temporary-exception.apple-events</key>
 	<array>
 		<string>com.apple.Safari</string>
@@ -9,19 +11,9 @@
 		<string>com.microsoft.edgemac</string>
 		<string>com.apple.systemevents</string>
 	</array>
-	<key>com.apple.security.temporary-exception.mach-lookup.global-name</key>
-	<array>
-		<string>com.renjfk.SimplyTrack</string>
-	</array>
-	<key>com.apple.security.temporary-exception.mach-register.global-name</key>
-	<array>
-		<string>com.renjfk.SimplyTrack</string>
-	</array>
 	<key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
 	<array>
 		<string>/Library/</string>
 	</array>
-	<key>com.apple.security.files.user-selected.read-write</key>
-	<true/>
 </dict>
 </plist>

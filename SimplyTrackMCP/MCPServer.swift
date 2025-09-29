@@ -7,29 +7,38 @@
 
 import Foundation
 import MCP
-import os
 
-/// MCP stdio server implementation that forwards requests to main app via IPC
+/// MCP stdio server implementation that forwards requests to main app via Unix domain sockets
 actor MCPServer {
-    private let logger = Logger(subsystem: "com.renjfk.SimplyTrackMCP", category: "MCPServer")
+    private let ipcClient: IPCClient
 
-    private lazy var ipcService: SimplyTrackIPCProtocol = {
-        let connection = NSXPCConnection(machServiceName: "com.renjfk.SimplyTrack")
-        connection.remoteObjectInterface = NSXPCInterface(with: SimplyTrackIPCProtocol.self)
-        connection.resume()
-        return connection.remoteObjectProxyWithErrorHandler { error in
-            // Fast fail - write error to stdout and exit immediately
-            print("ERROR: XPC connection failed: \(error.localizedDescription)")
-            fflush(stdout)
-            exit(1)
-        } as! SimplyTrackIPCProtocol
-    }()
+    init() throws {
+        // Get socket path from environment variable
+        guard let socketPath = ProcessInfo.processInfo.environment["SIMPLYTRACK_SOCKET_PATH"] else {
+            throw NSError(
+                domain: "SimplyTrackMCP",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "SIMPLYTRACK_SOCKET_PATH environment variable not set"]
+            )
+        }
+        self.ipcClient = IPCClient(socketPath: socketPath)
+    }
 
     /// Runs the MCP stdio server using the official MCP SDK
     func run() async throws {
-        logger.error("Starting SimplyTrack MCP server...")
+        // Using Unix domain sockets for IPC communication
 
-        let version = try await getVersion()
+        // Test connection to main app
+        let version: String
+        do {
+            version = try await ipcClient.getVersion()
+        } catch {
+            throw NSError(
+                domain: "SimplyTrackMCP",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "Cannot connect to SimplyTrack app. Please ensure SimplyTrack is running. Details: \(error.localizedDescription)"]
+            )
+        }
 
         // Create server with capabilities according to the SDK documentation
         let server = Server(
@@ -39,8 +48,6 @@ actor MCPServer {
                 tools: .init(listChanged: true)
             )
         )
-
-        logger.error("Server created, registering handlers...")
 
         // Register tool list handler
         await server.withMethodHandler(ListTools.self) { _ in
@@ -138,14 +145,10 @@ actor MCPServer {
 
         // Start the server and keep it running
         do {
-            logger.error("Starting server transport...")
             try await server.start(transport: transport)
-
-            logger.error("Server started successfully, waiting for completion...")
             // Keep the server running using the proper SDK method
             await server.waitUntilCompleted()
         } catch {
-            logger.error("MCP server error: \(error.localizedDescription)")
             throw error
         }
     }
@@ -161,7 +164,7 @@ actor MCPServer {
 
             do {
                 // Use same logic as IPC service
-                let usage = try await getUsageActivity(
+                let usage = try await ipcClient.getUsageActivity(
                     topPercentage: topPercentage,
                     dateString: dateString,
                     typeFilter: typeFilter
@@ -179,7 +182,6 @@ actor MCPServer {
                     )
                 }
             } catch {
-                logger.error("Failed to fetch usage activity: \(error.localizedDescription)")
                 return .init(
                     content: [.text("Error fetching usage activity: \(error.localizedDescription)")],
                     isError: true
@@ -191,33 +193,6 @@ actor MCPServer {
                 content: [.text("Unknown tool: \(params.name)")],
                 isError: true
             )
-        }
-    }
-
-    /// Get usage activity data by forwarding to main app via IPC
-    private func getUsageActivity(topPercentage: Double, dateString: String?, typeFilter: String) async throws -> String? {
-        // Forward request to main app via IPC
-        return try await withCheckedThrowingContinuation { continuation in
-            ipcService.getUsageActivity(
-                topPercentage: topPercentage,
-                dateString: dateString,
-                typeFilter: typeFilter
-            ) { result, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: result)
-                }
-            }
-        }
-    }
-
-    /// Get version from the main SimplyTrack app
-    private func getVersion() async throws -> String {
-        return try await withCheckedThrowingContinuation { continuation in
-            ipcService.getVersion { version in
-                continuation.resume(returning: version)
-            }
         }
     }
 }
