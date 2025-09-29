@@ -161,7 +161,21 @@ class IPCServiceManager: NSObject, @unchecked Sendable {
 
         Task {
             do {
-                try FileManager.default.removeItem(atPath: Self.socketPath)
+                let socketPath = Self.socketPath
+                self.logger.info("Starting IPC service at \(socketPath)")
+
+                // Ensure the directory exists
+                let socketURL = URL(fileURLWithPath: socketPath)
+                let parentDirectory = socketURL.deletingLastPathComponent()
+                try FileManager.default.createDirectory(at: parentDirectory, withIntermediateDirectories: true, attributes: nil)
+                // Remove existing socket file if it exists (ignore errors if file doesn't exist)
+                do {
+                    try FileManager.default.removeItem(atPath: socketPath)
+                } catch CocoaError.fileNoSuchFile {
+                    // Expected - socket file doesn't exist yet
+                } catch {
+                    self.logger.warning("Failed to remove existing socket file: \(error.localizedDescription)")
+                }
 
                 // Capture service and manager before the closure to avoid Sendable issues
                 let service = self.service
@@ -182,16 +196,14 @@ class IPCServiceManager: NSObject, @unchecked Sendable {
                     }
 
                 // Use Unix domain socket
-                let channel = try await bootstrap.bind(unixDomainSocketPath: Self.socketPath).get()
+                let channel = try await bootstrap.bind(unixDomainSocketPath: socketPath).get()
 
                 self.serverChannel = channel
                 self.isRunning = true
-                self.logger.info("Swift-NIO Unix domain socket IPC service started at \(Self.socketPath)")
 
                 try await channel.closeFuture.get()
-
             } catch {
-                self.logger.error("Failed to start Swift-NIO Unix socket service: \(error.localizedDescription)")
+                self.logger.error("Failed to start Swift-NIO Unix socket service at \(Self.socketPath): \(error)")
                 self.isRunning = false
             }
         }
@@ -213,9 +225,6 @@ class IPCServiceManager: NSObject, @unchecked Sendable {
             // Clean up Unix socket file
             try? FileManager.default.removeItem(atPath: Self.socketPath)
 
-            // Clear environment variable
-            unsetenv("SIMPLYTRACK_SOCKET_PATH")
-
             self.isRunning = false
             self.logger.info("Swift-NIO IPC service stopped")
         }
@@ -231,6 +240,7 @@ private final class IPCChannelHandler: ChannelInboundHandler {
 
     private let service: IPCService
     private weak var manager: IPCServiceManager?
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "IPCChannelHandler")
 
     init(service: IPCService, manager: IPCServiceManager) {
         self.service = service
@@ -278,7 +288,7 @@ private final class IPCChannelHandler: ChannelInboundHandler {
     }
 
     func errorCaught(context: ChannelHandlerContext, error: Error) {
-        print("IPC Channel error: \(error)")
+        logger.error("IPC Channel error: \(error)")
         // As we are not really interested getting notified on success or failure we just pass nil as promise to
         // reduce allocations.
         context.close(promise: nil)
