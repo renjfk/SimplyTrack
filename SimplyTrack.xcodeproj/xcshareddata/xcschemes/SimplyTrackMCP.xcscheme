@@ -51,6 +51,13 @@
             ReferencedContainer = "container:SimplyTrack.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "SIMPLYTRACK_LOCK_FILE"
+            value = "/Users/soner.koksal/Library/Containers/com.renjfk.SimplyTrack/Data/tmp/ipc.debug.lock"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"

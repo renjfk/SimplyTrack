@@ -12,6 +12,7 @@ import os
 /// Handles API endpoint configuration, authentication, and notification scheduling.
 struct AISettingsView: View {
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "AISettingsView")
+
     @AppStorage("aiEndpoint", store: .app) private var aiEndpoint = ""
     @AppStorage("aiModel", store: .app) private var aiModel = ""
 
@@ -25,11 +26,11 @@ struct AISettingsView: View {
     @AppStorage("summaryNotificationTime", store: .app) private var summaryNotificationTime: Double = AppStorageDefaults.summaryNotificationTime
     @AppStorage("summaryNotificationPrompt", store: .app) private var summaryNotificationPrompt = AppStorageDefaults.summaryNotificationPrompt
 
-    private var hasValidationErrors: Bool {
+    private var hasAIConfigurationErrors: Bool {
         aiEndpoint.isEmpty || aiModel.isEmpty || summaryNotificationPrompt.isEmpty
     }
 
-    private var canTestSettings: Bool {
+    private var canTestAIConnection: Bool {
         !aiEndpoint.isEmpty && !aiModel.isEmpty
     }
 
@@ -42,18 +43,17 @@ struct AISettingsView: View {
         VStack(alignment: .leading, spacing: 0) {
             Form {
                 Section("AI Configuration") {
-                    HStack(alignment: .top) {
+                    ValidatedTextField(
+                        title: "API Endpoint",
+                        text: $aiEndpoint,
+                        placeholder: "https://api.openai.com/v1/chat/completions",
+                        helpText: "Full URL for AI API chat completions endpoint",
+                        required: summaryNotificationsEnabled,
+                        requiredMessage: "Endpoint is required"
+                    ) {
                         Image(systemName: "link")
                             .foregroundColor(.blue)
                             .frame(width: 16)
-                        ValidatedTextField(
-                            title: "API Endpoint",
-                            text: $aiEndpoint,
-                            placeholder: "https://api.openai.com/v1/chat/completions",
-                            helpText: "Full URL for AI API chat completions endpoint",
-                            required: summaryNotificationsEnabled,
-                            errorMessage: "Endpoint is required"
-                        )
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
@@ -74,18 +74,17 @@ struct AISettingsView: View {
                             .foregroundColor(.secondary)
                     }
 
-                    HStack(alignment: .top) {
+                    ValidatedTextField(
+                        title: "Model",
+                        text: $aiModel,
+                        placeholder: "gpt-4",
+                        helpText: "AI model to use for features",
+                        required: summaryNotificationsEnabled,
+                        requiredMessage: "Model is required"
+                    ) {
                         Image(systemName: "brain")
                             .foregroundColor(.purple)
                             .frame(width: 16)
-                        ValidatedTextField(
-                            title: "Model",
-                            text: $aiModel,
-                            placeholder: "gpt-4",
-                            helpText: "AI model to use for features",
-                            required: summaryNotificationsEnabled,
-                            errorMessage: "Model is required"
-                        )
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
@@ -98,7 +97,7 @@ struct AISettingsView: View {
                                     await testConnection()
                                 }
                             }
-                            .disabled(!canTestSettings || isTestingConnection)
+                            .disabled(!canTestAIConnection || isTestingConnection)
 
                             if isTestingConnection {
                                 ProgressView()
@@ -142,13 +141,13 @@ struct AISettingsView: View {
                             Toggle(
                                 "Enable summary notification",
                                 isOn: Binding(
-                                    get: { summaryNotificationsEnabled && !hasValidationErrors },
+                                    get: { summaryNotificationsEnabled && !hasAIConfigurationErrors },
                                     set: { newValue in
                                         summaryNotificationsEnabled = newValue
                                     }
                                 )
                             )
-                            .disabled(hasValidationErrors)
+                            .disabled(hasAIConfigurationErrors)
                             .toggleStyle(.switch)
                             Spacer()
                         }
@@ -234,7 +233,7 @@ struct AISettingsView: View {
 
                         TextEditor(text: .constant(claudeConfigManager.mcpConfiguration))
                             .font(.system(.caption, design: .monospaced))
-                            .frame(height: 110)
+                            .frame(height: 160)
                             .background(Color(NSColor.controlBackgroundColor))
                             .cornerRadius(6)
                             .overlay(
@@ -376,55 +375,43 @@ extension AISettingsView.TestResult {
 
 // MARK: - Reusable Components
 
-struct ValidatedTextField: View {
+struct ValidatedTextField<Icon: View>: View {
     let title: String
     @Binding var text: String
     let placeholder: String
     let helpText: String
     let required: Bool
-    let errorMessage: String
+    let requiredMessage: String?
+    let icon: Icon
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            TextField(text: $text, prompt: Text(placeholder)) {
-                Text(title)
-            }
-
-            if required && text.isEmpty {
-                Text(errorMessage)
-                    .font(.caption)
-                    .foregroundColor(.red)
-            } else {
-                Text(helpText)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
+    init(
+        title: String,
+        text: Binding<String>,
+        placeholder: String = "",
+        helpText: String,
+        required: Bool = false,
+        requiredMessage: String? = nil,
+        @ViewBuilder icon: () -> Icon
+    ) {
+        self.title = title
+        self._text = text
+        self.placeholder = placeholder
+        self.helpText = helpText
+        self.required = required
+        self.requiredMessage = requiredMessage
+        self.icon = icon()
     }
-}
-
-struct ValidatedSecureField: View {
-    let title: String
-    @Binding var text: String
-    let placeholder: String
-    let helpText: String
-    let errorMessage: String?
-    let shouldValidate: Bool
-    let validator: (String) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            SecureField(text: $text, prompt: Text(placeholder)) {
-                Text(title)
-            }
-            .onChange(of: text) { _, newValue in
-                if shouldValidate {
-                    validator(newValue)
-                }
+            HStack(alignment: .top) {
+                icon
+
+                TextField(title, text: $text, prompt: Text(placeholder))
             }
 
-            if shouldValidate, let error = errorMessage {
-                Text(error)
+            if required && text.isEmpty, let message = requiredMessage {
+                Text(message)
                     .font(.caption)
                     .foregroundColor(.red)
             } else {
