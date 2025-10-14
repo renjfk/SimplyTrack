@@ -14,6 +14,7 @@ struct GeneralSettingsView: View {
     @StateObject private var loginItemManager = LoginItemManager.shared
     @State private var launchAtLoginEnabled = false
     @AppStorage("updateFrequency", store: .app) private var updateFrequency: UpdateFrequency = .daily
+    @AppStorage("idleTimeoutSeconds", store: .app) private var idleTimeoutSeconds: Double = AppStorageDefaults.idleTimeoutSeconds
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -58,6 +59,32 @@ struct GeneralSettingsView: View {
                     }
 
                     Text("How often SimplyTrack should check for new versions")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .top) {
+                        Image(systemName: "clock")
+                            .foregroundColor(.orange)
+                            .frame(width: 16)
+                        Text("Idle timeout")
+
+                        Spacer()
+
+                        Picker("", selection: $idleTimeoutSeconds) {
+                            Text("1 minute").tag(60.0)
+                            Text("2 minutes").tag(120.0)
+                            Text("5 minutes").tag(300.0)
+                            Text("10 minutes").tag(600.0)
+                            Text("15 minutes").tag(900.0)
+                            Text("30 minutes").tag(1800.0)
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 200)
+                    }
+
+                    Text("Stop tracking after this period of inactivity")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
