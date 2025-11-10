@@ -8,19 +8,19 @@
 import Charts
 import SwiftUI
 
-/// Displays a pie chart showing top application usage with legend.
-/// Shows the top 5 applications by usage time with colored segments and labels.
+/// Displays a pie chart showing top usage categories including apps and idle time.
+/// Shows the top 5 usage categories by time with colored segments and labels.
 struct UsagePieChart: View {
     /// Selected date for animation key
     let selectedDate: Date
-    /// Top applications data for pie chart display
+    /// Top usage categories data for pie chart display (apps, idle, etc.)
     let topApps: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)]
 
     private var topFiveApps: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)] {
-        Array(topApps.prefix(5))
+        Array(topApps.prefix(6)) // Increased to 6 to accommodate idle time
     }
 
-    private let colors: [Color] = [.blue, .green, .orange, .red, .purple]
+    private let colors: [Color] = [.blue, .green, .orange, .red, .purple, .gray]
 
     var body: some View {
         HStack(spacing: 12) {

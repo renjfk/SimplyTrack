@@ -441,10 +441,11 @@ struct ContentView: View {
             let dailyResult = try modelContext.fetch(dailyDescriptor)
             let appSessions = dailyResult.filter { $0.type == "app" }
             let websiteSessions = dailyResult.filter { $0.type == "website" }
+            let idleSessions = dailyResult.filter { $0.type == "idle" }
 
             let workPeriods = computeWorkPeriods(from: appSessions)
             let totalActiveTime = appSessions.reduce(0) { $0 + $1.duration }
-            let topApps = aggregateAppSessions(appSessions, iconMap: iconMap)
+            let topApps = aggregateAllSessions(appSessions: appSessions, idleSessions: idleSessions, iconMap: iconMap)
             let topWebsites = aggregateWebsiteSessions(websiteSessions, iconMap: iconMap)
 
             return DailyDataResults(
@@ -484,6 +485,13 @@ struct ContentView: View {
                 },
                 sortBy: [SortDescriptor(\.startTime)]
             )
+            
+            let weeklyIdleDescriptor = FetchDescriptor<UsageSession>(
+                predicate: #Predicate<UsageSession> { session in
+                    session.startTime >= startOfWeek && session.startTime < endOfWeek && session.type == "idle" && session.endTime != nil
+                },
+                sortBy: [SortDescriptor(\.startTime)]
+            )
 
             let iconDescriptor = FetchDescriptor<Icon>()
             let icons = try modelContext.fetch(iconDescriptor)
@@ -495,10 +503,11 @@ struct ContentView: View {
 
             let weeklyResult = try modelContext.fetch(weeklyDescriptor)
             let weeklyWebsiteResult = try modelContext.fetch(weeklyWebsiteDescriptor)
+            let weeklyIdleResult = try modelContext.fetch(weeklyIdleDescriptor)
 
             let weeklyActivity = computeWeeklyActivity(from: weeklyResult)
             let weeklyTotalActiveTime = weeklyResult.reduce(0) { $0 + $1.duration }
-            let weeklyTopApps = aggregateAppSessions(weeklyResult, iconMap: iconMap)
+            let weeklyTopApps = aggregateAllSessions(appSessions: weeklyResult, idleSessions: weeklyIdleResult, iconMap: iconMap)
             let weeklyTopWebsites = aggregateWebsiteSessions(weeklyWebsiteResult, iconMap: iconMap)
 
             return WeeklyDataResults(
@@ -555,6 +564,39 @@ struct ContentView: View {
             let duration = periodEndTime.timeIntervalSince(periodStartTime)
             return (startTime: periodStartTime, endTime: periodEndTime, duration: duration)
         }
+
+        return result
+    }
+
+    private func aggregateAllSessions(appSessions: [UsageSession], idleSessions: [UsageSession], iconMap: [String: Data]) -> [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)] {
+        var allData: [String: (name: String, totalTime: TimeInterval)] = [:]
+
+        // Add app sessions
+        for session in appSessions {
+            let existing = allData[session.identifier, default: (name: session.name, totalTime: 0)]
+            allData[session.identifier] = (
+                name: existing.name,
+                totalTime: existing.totalTime + session.duration
+            )
+        }
+        
+        // Add idle sessions
+        var totalIdleTime: TimeInterval = 0
+        for session in idleSessions {
+            totalIdleTime += session.duration
+        }
+        
+        if totalIdleTime > 0 {
+            allData["idle"] = (name: "Idle", totalTime: totalIdleTime)
+        }
+
+        let result =
+            allData
+            .map { (identifier, data) in
+                let iconData = identifier == "idle" ? nil : iconMap[identifier]
+                return (identifier: identifier, name: data.name, iconData: iconData, totalTime: data.totalTime)
+            }
+            .sorted { $0.totalTime > $1.totalTime }
 
         return result
     }

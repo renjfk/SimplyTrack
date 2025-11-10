@@ -9,6 +9,7 @@ import AppKit
 import CoreGraphics
 import Foundation
 import SwiftData
+import SwiftUI
 import os
 
 /// Core service responsible for tracking app and website usage patterns.
@@ -37,11 +38,17 @@ class TrackingService {
 
     private var currentAppSession: UsageSession?
     private var currentWebsiteSession: UsageSession?
+    private var currentIdleSession: UsageSession?
 
     // MARK: - Idle Detection
 
     private var lastActivityTime = Date()
-    private let idleThreshold: TimeInterval = 300
+    private var wasIdleLastUpdate = false
+    @AppStorage("idleTimeoutSeconds", store: .app) private var idleTimeoutSeconds: Double = AppStorageDefaults.idleTimeoutSeconds
+    
+    private var idleThreshold: TimeInterval {
+        return idleTimeoutSeconds
+    }
 
     /// Initializes the tracking service with required dependencies.
     /// - Parameters:
@@ -101,10 +108,21 @@ class TrackingService {
     private func updateCurrentActivity() async {
         let now = Date()
         let systemIdleTime = getSystemIdleTime()
+        let isCurrentlyIdle = systemIdleTime >= idleThreshold
 
-        // Check if user has been idle for more than threshold
-        if systemIdleTime >= idleThreshold {
-            await endAllActiveSessions()
+        // Handle idle state transitions
+        if isCurrentlyIdle && !wasIdleLastUpdate {
+            // Just became idle - end active sessions and start idle session
+            await endActiveNonIdleSessions()
+            startIdleSession(at: now.addingTimeInterval(-systemIdleTime))
+            wasIdleLastUpdate = true
+            return
+        } else if !isCurrentlyIdle && wasIdleLastUpdate {
+            // Just became active - end idle session
+            endIdleSession(at: now)
+            wasIdleLastUpdate = false
+        } else if isCurrentlyIdle {
+            // Still idle - continue idle session, no action needed
             return
         }
 
@@ -197,8 +215,37 @@ class TrackingService {
         sessionPersistenceService.queueSession(websiteSession)
         currentWebsiteSession = nil
     }
+    
+    private func startIdleSession(at startTime: Date) {
+        currentIdleSession = UsageSession(type: .idle, identifier: "idle", name: "Idle", startTime: startTime)
+    }
+    
+    private func endIdleSession(at endTime: Date) {
+        guard let idleSession = currentIdleSession else { return }
+        idleSession.endSession(at: endTime)
+        sessionPersistenceService.queueSession(idleSession)
+        currentIdleSession = nil
+    }
+    
+    private func endActiveNonIdleSessions() async {
+        let now = Date()
+        
+        // End app session if active
+        if let appSession = currentAppSession {
+            appSession.endSession(at: now)
+            sessionPersistenceService.queueSession(appSession)
+            currentAppSession = nil
+        }
+        
+        // End website session if active
+        if let websiteSession = currentWebsiteSession {
+            websiteSession.endSession(at: now)
+            sessionPersistenceService.queueSession(websiteSession)
+            currentWebsiteSession = nil
+        }
+    }
 
-    /// Ends all currently active sessions (both app and website).
+    /// Ends all currently active sessions (app, website, and idle).
     /// Called when user goes idle or system enters inactive state.
     /// Public method that can be called by AppDelegate during app termination.
     func endAllActiveSessions() async {
@@ -216,6 +263,13 @@ class TrackingService {
             websiteSession.endSession(at: now)
             sessionPersistenceService.queueSession(websiteSession)
             currentWebsiteSession = nil
+        }
+        
+        // End idle session if active
+        if let idleSession = currentIdleSession {
+            idleSession.endSession(at: now)
+            sessionPersistenceService.queueSession(idleSession)
+            currentIdleSession = nil
         }
     }
 

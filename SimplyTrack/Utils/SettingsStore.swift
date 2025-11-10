@@ -33,6 +33,10 @@ struct AppStorageDefaults {
     /// Default private browsing tracking preference.
     /// Privacy-first approach: disabled by default to protect user privacy.
     static let trackPrivateBrowsing = false
+    
+    /// Default idle timeout threshold in seconds (5 minutes).
+    /// Time of inactivity before tracking is paused.
+    static let idleTimeoutSeconds: Double = 300
 }
 
 /// UserDefaults extension providing environment-specific storage isolation.

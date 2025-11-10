@@ -14,4 +14,6 @@ enum UsageType: String, Codable, CaseIterable {
     case app
     /// Website usage tracking (browser-based activity)
     case website
+    /// Idle time tracking (periods of user inactivity)
+    case idle
 }

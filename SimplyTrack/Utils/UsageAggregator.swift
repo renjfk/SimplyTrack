@@ -35,6 +35,26 @@ struct UsageAggregator {
         let sessions = try modelContext.fetch(descriptor)
         return aggregateAndFormat(sessions: sessions, topPercentage: topPercentage)
     }
+    
+    /// Aggregates idle time for a given date
+    /// - Parameters:
+    ///   - date: The date to aggregate idle time for
+    ///   - modelContext: SwiftData model context for database access
+    /// - Returns: Total idle time for the date
+    static func aggregateIdleTime(for date: Date, modelContext: ModelContext) throws -> TimeInterval {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+
+        let descriptor = FetchDescriptor<UsageSession>(
+            predicate: #Predicate<UsageSession> { session in
+                session.startTime >= startOfDay && session.startTime < endOfDay && session.endTime != nil && session.type == "idle"
+            }
+        )
+
+        let sessions = try modelContext.fetch(descriptor)
+        return sessions.reduce(0) { $0 + $1.duration }
+    }
 
     private static func aggregateAndFormat(sessions: [UsageSession], topPercentage: Double) -> String {
         var appUsage: [String: TimeInterval] = [:]
@@ -48,6 +68,8 @@ struct UsageAggregator {
                 appUsage[session.name] = (appUsage[session.name] ?? 0) + duration
             } else if session.type == UsageType.website.rawValue {
                 websiteUsage[session.name] = (websiteUsage[session.name] ?? 0) + duration
+            } else if session.type == UsageType.idle.rawValue {
+                appUsage["Idle"] = (appUsage["Idle"] ?? 0) + duration
             }
         }
 
