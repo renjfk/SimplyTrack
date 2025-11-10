@@ -9,6 +9,7 @@
 		<string>com.apple.Safari</string>
 		<string>com.google.Chrome</string>
 		<string>com.microsoft.edgemac</string>
+		<string>company.thebrowser.Browser</string>
 		<string>com.apple.systemevents</string>
 	</array>
 	<key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>

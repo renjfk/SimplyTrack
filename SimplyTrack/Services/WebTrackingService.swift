@@ -3,7 +3,7 @@
 //  SimplyTrack
 //
 //  Handles browser integration, AppleScript execution, favicon fetching, and website detection
-//  Supports Safari, Chrome, and Edge through AppleScript communication for website tracking
+//  Supports Safari, Chrome, Edge, and Arc through AppleScript communication for website tracking
 //
 
 import AppKit
@@ -36,6 +36,7 @@ class WebTrackingService {
         SafariBrowser(),
         ChromeBrowser(),
         EdgeBrowser(),
+        ArcBrowser(),
     ].reduce(into: [:]) { result, browser in
         result[browser.bundleId] = browser
     }
