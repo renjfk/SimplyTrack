@@ -21,7 +21,15 @@ class ArcBrowser: BaseBrowser {
                 tell application "Arc"
                     if (count of windows) > 0 then
                         tell front window
-                            return URL of active tab
+                            try
+                                return URL of active tab
+                            on error errMsg number errNum
+                                if errNum is -1728 and errMsg contains "active tab" then
+                                    return missing value
+                                else
+                                    error errMsg number errNum
+                                end if
+                            end try
                         end tell
                     end if
                 end tell
