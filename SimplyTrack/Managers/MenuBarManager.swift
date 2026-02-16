@@ -38,8 +38,11 @@ class MenuBarManager: NSObject, NSPopoverDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
         if let statusButton = statusItem?.button {
-            if let svgData = loadSVGIcon() {
-                statusButton.image = NSImage(data: svgData)
+            if let svgData = loadSVGIcon(), let image = NSImage(data: svgData) {
+                #if !DEBUG
+                    image.isTemplate = true
+                #endif
+                statusButton.image = image
             } else {
                 statusButton.image = NSImage(systemSymbolName: "clock", accessibilityDescription: "SimplyTrack")
             }
