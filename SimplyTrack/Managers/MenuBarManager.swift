@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import Combine
 import Foundation
 import ServiceManagement
 import SwiftData
@@ -21,6 +22,8 @@ class MenuBarManager: NSObject, NSPopoverDelegate {
 
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
+    private var heightCancellable: AnyCancellable?
+    private let heightManager = PopoverHeightManager.shared
 
     /// Initializes menu bar manager with required dependencies.
     /// - Parameters:
@@ -62,10 +65,12 @@ class MenuBarManager: NSObject, NSPopoverDelegate {
 
     /// Configures the popover window with ContentView and environment objects.
     /// Sets appropriate sizing and behavior for the main app interface.
+    /// Observes PopoverHeightManager to animate popover height changes.
     func setupPopover() {
         popover = NSPopover()
         popover?.contentSize = NSSize(width: 340, height: 600)
         popover?.behavior = .transient
+        popover?.animates = false
 
         popover?.contentViewController = NSHostingController(
             rootView: ContentView()
@@ -73,6 +78,24 @@ class MenuBarManager: NSObject, NSPopoverDelegate {
                 .environmentObject(appDelegate!)
         )
         popover?.delegate = self
+
+        // Observe ideal height changes from the SwiftUI content and animate popover resizing
+        heightCancellable = heightManager.$idealHeight
+            .debounce(for: .milliseconds(16), scheduler: RunLoop.main)
+            .removeDuplicates()
+            .sink { [weak self] _ in
+                self?.updatePopoverHeight()
+            }
+    }
+
+    /// Triggers an animated popover resize when the ideal content height changes.
+    private func updatePopoverHeight() {
+        guard let popover = popover, popover.isShown,
+            let contentView = popover.contentViewController?.view,
+            let window = contentView.window
+        else { return }
+
+        heightManager.resizeWindow(window, contentView: contentView)
     }
 
     /// Shows or hides the popover window.
@@ -132,9 +155,15 @@ class MenuBarManager: NSObject, NSPopoverDelegate {
     // MARK: - NSPopoverDelegate
 
     /// Called when popover is about to be shown.
-    /// Posts notification for other components to respond to popover presentation.
+    /// Updates available screen height, resizes to current ideal height, and posts notification.
     func popoverWillShow(_ notification: Notification) {
+        heightManager.updateMaxHeight()
         NotificationCenter.default.post(name: NSNotification.Name("PopoverWillShow"), object: nil)
+
+        // Resize on next run loop tick so the window is fully set up
+        DispatchQueue.main.async { [weak self] in
+            self?.updatePopoverHeight()
+        }
     }
 
     /// Called when popover is closed.
