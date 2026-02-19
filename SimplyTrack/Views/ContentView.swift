@@ -43,6 +43,14 @@ struct ContentView: View {
     @State private var showAllApps = false
     @State private var showAllWebsites = false
 
+    // Height measurement
+    @State private var headerHeight: CGFloat = 0
+    @State private var scrollContentHeight: CGFloat = 0
+    @State private var bottomHeight: CGFloat = 0
+
+    // Popover height management
+    @StateObject private var heightManager = PopoverHeightManager.shared
+
     // Page view state
     @State private var currentPage = 0
 
@@ -79,6 +87,13 @@ struct ContentView: View {
         VStack(spacing: 0) {
             // Header
             headerView
+                .background(
+                    GeometryReader { geo in
+                        Color.clear.onChange(of: geo.size.height, initial: true) { _, newHeight in
+                            headerHeight = newHeight
+                        }
+                    }
+                )
 
             ScrollView {
                 VStack(spacing: 12) {
@@ -178,12 +193,29 @@ struct ContentView: View {
                     )
                 }
                 .padding(12)
+                .background(
+                    GeometryReader { geo in
+                        Color.clear.onChange(of: geo.size.height, initial: true) { _, newHeight in
+                            scrollContentHeight = newHeight
+                        }
+                    }
+                )
             }
 
             // Bottom Controls
             bottomControls
+                .background(
+                    GeometryReader { geo in
+                        Color.clear.onChange(of: geo.size.height, initial: true) { _, newHeight in
+                            bottomHeight = newHeight
+                        }
+                    }
+                )
         }
-        .frame(width: 340, height: 600)
+        .frame(width: 340)
+        .onChange(of: headerHeight) { _, _ in updateIdealHeight() }
+        .onChange(of: scrollContentHeight) { _, _ in updateIdealHeight() }
+        .onChange(of: bottomHeight) { _, _ in updateIdealHeight() }
         .onChange(of: selectedDate) { _, _ in
             updateTodayViewingStatus()
             //            MockDataGenerator.populateWithMockData(
@@ -202,6 +234,8 @@ struct ContentView: View {
             if isViewingTodayWhenSelected {
                 selectedDate = Date()
             }
+            // Force height recalculation on each popover show
+            updateIdealHeight()
             // Only refresh if we don't have current data
             refreshCachedValues()
         }
@@ -662,6 +696,13 @@ struct ContentView: View {
     }
 
     // MARK: - Helper Methods
+
+    private func updateIdealHeight() {
+        let totalHeight = scrollContentHeight + headerHeight + bottomHeight
+        if abs(heightManager.idealHeight - totalHeight) > 1 {
+            heightManager.idealHeight = totalHeight
+        }
+    }
 
     private func updateTodayViewingStatus() {
         isViewingTodayWhenSelected = viewMode == .day && Calendar.current.isDate(selectedDate, inSameDayAs: Date())
