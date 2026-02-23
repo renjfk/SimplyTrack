@@ -20,6 +20,15 @@ class TrackingService {
     /// Interval for persisting usage data to database and cache expiry
     static let dataPersistenceInterval: TimeInterval = 30.0
 
+    /// Bundle identifiers of system UI that should be excluded from tracking.
+    private static let excludedBundleIds: Set<String> = [
+        "com.apple.dock",
+        "com.apple.loginwindow",
+        "com.apple.Spotlight",
+        "com.apple.notificationcenterui",
+        "com.apple.controlcenter",
+    ]
+
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "TrackingService")
 
     // MARK: - Dependencies
@@ -27,6 +36,7 @@ class TrackingService {
     private let modelContainer: ModelContainer
     private let sessionPersistenceService: SessionPersistenceService
     private let webTrackingService = WebTrackingService()
+    private let windowDetectionService = WindowDetectionService()
 
     // MARK: - Tracking State
 
@@ -116,19 +126,39 @@ class TrackingService {
             let name = frontmostApp.localizedName
         {
 
-            // Special case: loginwindow indicates user is not actively using the system
-            if bundleId.hasPrefix("com.apple.loginwindow") {
-                await endAllActiveSessions()
+            // Check if a floating/overlay window from another app is actually on top.
+            // This handles apps running in always-on-top mode (e.g., Ghostty quick terminal,
+            // 1Password Quick Access) that don't become the frontmost app.
+            let activeBundleId: String
+            let activeName: String
+            let activeApp: NSRunningApplication
+
+            if let floatingWindow = windowDetectionService.detectTopmostFloatingWindow(frontmostBundleId: bundleId) {
+                activeBundleId = floatingWindow.bundleIdentifier
+                activeName = floatingWindow.name
+                activeApp = floatingWindow.app
+            } else {
+                activeBundleId = bundleId
+                activeName = name
+                activeApp = frontmostApp
+            }
+
+            // Skip system UI that shouldn't be tracked (Dock, Spotlight, Control Center, etc.)
+            if Self.excludedBundleIds.contains(activeBundleId) {
+                // Loginwindow means user is at lock screen — end all active sessions
+                if activeBundleId == "com.apple.loginwindow" {
+                    await endAllActiveSessions()
+                }
                 return
             }
 
             // Extract and queue app icon for batch saving
-            if let iconData = IconUtils.getAppIconAsPNG(for: frontmostApp) {
-                sessionPersistenceService.queueIconData(identifier: bundleId, iconData: iconData)
+            if let iconData = IconUtils.getAppIconAsPNG(for: activeApp) {
+                sessionPersistenceService.queueIconData(identifier: activeBundleId, iconData: iconData)
             }
 
             // Update or create app usage session
-            updateAppSession(identifier: bundleId, name: name, now: now)
+            updateAppSession(identifier: activeBundleId, name: activeName, now: now)
         }
 
         // Track website usage asynchronously to avoid blocking app tracking
