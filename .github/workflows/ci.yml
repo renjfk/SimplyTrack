@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  XCODE_VERSION: latest-stable
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ env.XCODE_VERSION }}
+
+      - name: Format check (swift-format)
+        run: swift-format lint --strict --recursive SimplyTrack/ SimplyTrackMCP/ SimplyTrackTests/ SimplyTrackUITests/
+
+      - name: Build
+        run: |
+          xcodebuild -project SimplyTrack.xcodeproj \
+            -scheme SimplyTrack \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Run tests
+        run: |
+          xcodebuild -project SimplyTrack.xcodeproj \
+            -scheme SimplyTrack \
+            -configuration Debug \
+            -skip-testing:SimplyTrackUITests \
+            CODE_SIGNING_ALLOWED=NO \
+            test
