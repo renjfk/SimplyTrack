@@ -24,6 +24,9 @@ jobs:
         with:
           xcode-version: ${{ env.XCODE_VERSION }}
 
+      - name: Install swift-format
+        run: brew install swift-format
+
       - name: Format check (swift-format)
         run: swift-format lint --strict --recursive SimplyTrack/ SimplyTrackMCP/ SimplyTrackTests/ SimplyTrackUITests/
 
