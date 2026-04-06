@@ -48,6 +48,12 @@ class TrackingService {
     private var currentAppSession: UsageSession?
     private var currentWebsiteSession: UsageSession?
 
+    // MARK: - Icon Cache
+
+    /// Caches extracted PNG icon data keyed by bundle ID to avoid re-converting every second.
+    /// Icons rarely change, so this cache is never cleared during the app lifecycle.
+    private var appIconCache: [String: Data] = [:]
+
     // MARK: - Idle Detection
 
     private var lastActivityTime = Date()
@@ -152,8 +158,11 @@ class TrackingService {
                 return
             }
 
-            // Extract and queue app icon for batch saving
-            if let iconData = IconUtils.getAppIconAsPNG(for: activeApp) {
+            // Extract and queue app icon for batch saving (cached to avoid PNG conversion every second)
+            if let iconData = appIconCache[activeBundleId] {
+                sessionPersistenceService.queueIconData(identifier: activeBundleId, iconData: iconData)
+            } else if let iconData = IconUtils.getAppIconAsPNG(for: activeApp) {
+                appIconCache[activeBundleId] = iconData
                 sessionPersistenceService.queueIconData(identifier: activeBundleId, iconData: iconData)
             }
 

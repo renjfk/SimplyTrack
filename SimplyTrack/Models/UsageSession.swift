@@ -13,6 +13,8 @@ import SwiftData
 /// Used for generating usage statistics, summaries, and time-tracking analytics.
 @Model
 class UsageSession {
+    #Index<UsageSession>([\.startTime, \.type], [\.identifier])
+
     /// Unique identifier for this usage session
     @Attribute(.unique) var id: UUID = UUID()
     /// Type of usage being tracked ("app" or "website")

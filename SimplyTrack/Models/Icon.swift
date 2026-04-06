@@ -13,6 +13,8 @@ import SwiftData
 /// Used by TrackingService and SessionPersistenceService for icon management.
 @Model
 class Icon {
+    #Index<Icon>([\.identifier])
+
     /// Unique identifier for this icon (bundle ID for apps, domain for websites)
     @Attribute(.unique) var identifier: String
     /// PNG image data for the cached icon

@@ -74,9 +74,9 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
     }
 
     /// Starts the notification scheduler that checks for daily summary notifications.
-    /// Creates a timer that runs every 5 minutes to check if it's time to send the daily notification.
+    /// Creates a timer that runs every 60 seconds to check if it's time to send the daily notification.
     func startNotificationScheduler() {
-        Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { _ in
+        Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
             Task { @MainActor in
                 await self.checkForDailyNotification()
             }
@@ -125,20 +125,27 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
         let appSummary: String
         let websiteSummary: String
 
+        // Run aggregation on a background context to avoid blocking the main thread
+        let container = modelContainer
         do {
-            appSummary = try UsageAggregator.aggregateUsage(
-                for: yesterday,
-                type: .app,
-                topPercentage: 0.8,
-                modelContext: modelContainer.mainContext
-            )
+            (appSummary, websiteSummary) = try await Task.detached(priority: .utility) {
+                let context = ModelContext(container)
+                context.autosaveEnabled = false
 
-            websiteSummary = try UsageAggregator.aggregateUsage(
-                for: yesterday,
-                type: .website,
-                topPercentage: 0.8,
-                modelContext: modelContainer.mainContext
-            )
+                let app = try UsageAggregator.aggregateUsage(
+                    for: yesterday,
+                    type: .app,
+                    topPercentage: 0.8,
+                    modelContext: context
+                )
+                let website = try UsageAggregator.aggregateUsage(
+                    for: yesterday,
+                    type: .website,
+                    topPercentage: 0.8,
+                    modelContext: context
+                )
+                return (app, website)
+            }.value
         } catch {
             logger.error("Failed to aggregate usage data: \(error.localizedDescription)")
             return
