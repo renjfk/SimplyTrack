@@ -49,15 +49,21 @@ SimplyTrackMCP/ # Flat structure: main.swift, MCPServer.swift, IPCClient.swift
 ## Build Commands
 
 ```bash
-xcodebuild -project SimplyTrack.xcodeproj -scheme SimplyTrack -configuration Debug build
+xcodebuild -project SimplyTrack.xcodeproj -scheme SimplyTrack -configuration Debug CODE_SIGNING_ALLOWED=NO build
 xcodebuild -project SimplyTrack.xcodeproj -scheme SimplyTrack -configuration Release build
-xcodebuild -project SimplyTrack.xcodeproj -scheme SimplyTrackMCP -configuration Debug build
-xcodebuild -project SimplyTrack.xcodeproj -scheme SimplyTrack test
+xcodebuild -project SimplyTrack.xcodeproj -scheme SimplyTrackMCP -configuration Debug CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project SimplyTrack.xcodeproj -scheme SimplyTrack -configuration Debug \
+  -skip-testing:SimplyTrackUITests CODE_SIGNING_ALLOWED=NO test
 xcodebuild -project SimplyTrack.xcodeproj -scheme SimplyTrack \
+  -skip-testing:SimplyTrackUITests CODE_SIGNING_ALLOWED=NO \
   test -only-testing:SimplyTrackTests/SimplyTrackTests/example
 swift-format --in-place --recursive SimplyTrack/ SimplyTrackMCP/ SimplyTrackTests/ SimplyTrackUITests/
 swift-format lint --recursive SimplyTrack/
 ```
+
+Notes:
+- `CODE_SIGNING_ALLOWED=NO` is required for unsigned local/CI builds (no signing certificate)
+- `-skip-testing:SimplyTrackUITests` is required because UI tests need a signed app bundle to launch
 
 Verify changes: build + test with zero failures. Always run `swift-format --in-place` on files you modify.
 
@@ -78,5 +84,8 @@ Verify changes: build + test with zero failures. Always run `swift-format --in-p
 
 ## CI/CD
 
-Release via `workflow_dispatch` in `.github/workflows/release.yml`. Versioning is major.minor only (no patch).
-Pipeline: tag + version bump -> archive + sign -> DMG (`appdmg`) -> notarize -> GitHub Release.
+- **CI**: `.github/workflows/ci.yml` runs on push to `main` and all PRs (format check, build, unit tests)
+- **Prerelease**: `.github/workflows/prerelease.yml` via `workflow_dispatch` or `/prerelease` PR comment (builds signed DMG, creates GitHub prerelease)
+- **Slash commands**: `.github/workflows/slash-command.yml` dispatches workflows from PR comments (e.g., `/prerelease`)
+- **Release**: `.github/workflows/release.yml` via `workflow_dispatch`. Versioning is major.minor only (no patch).
+  Pipeline: tag + version bump -> archive + sign -> DMG (`appdmg`) -> notarize -> GitHub Release.
