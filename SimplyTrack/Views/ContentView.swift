@@ -236,7 +236,9 @@ struct ContentView: View {
             }
             // Force height recalculation on each popover show
             updateIdealHeight()
-            // Only refresh if we don't have current data
+            // Always invalidate cache for today since data changes continuously.
+            // Without this, the 30-second cache window causes stale/empty graphs.
+            invalidateCacheForToday()
             refreshCachedValues()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("PopoverDidClose"))) { _ in
@@ -339,6 +341,24 @@ struct ContentView: View {
     }
 
     // MARK: - Data Management
+
+    /// Invalidates cached data when the selected date is today.
+    /// Today's data is always changing, so we must re-fetch on every popover show.
+    private func invalidateCacheForToday() {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(selectedDate) {
+            lastDailyFetchDate = nil
+            lastDailyFetchTime = nil
+        }
+        // Also invalidate weekly if the current week contains today
+        if let weekStart = calendar.dateInterval(of: .weekOfYear, for: selectedDate)?.start,
+            let todayWeekStart = calendar.dateInterval(of: .weekOfYear, for: Date())?.start,
+            calendar.isDate(weekStart, inSameDayAs: todayWeekStart)
+        {
+            lastWeeklyFetchDate = nil
+            lastWeeklyFetchTime = nil
+        }
+    }
 
     private func refreshCachedValues() {
         // Don't fetch data if popover isn't visible (except on startup)
@@ -446,115 +466,146 @@ struct ContentView: View {
         let weeklyTopWebsites: [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)]
     }
 
-    @MainActor
     private func fetchDailyData() async -> DailyDataResults {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: selectedDate)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+        let container = modelContext.container
 
-        do {
-            let dailyDescriptor = FetchDescriptor<UsageSession>(
-                predicate: #Predicate<UsageSession> { session in
-                    session.startTime >= startOfDay && session.startTime < endOfDay && session.endTime != nil
-                },
-                sortBy: [
-                    SortDescriptor(\.type),
-                    SortDescriptor(\.identifier),
-                    SortDescriptor(\.startTime),
-                ]
-            )
+        // Run all DB work on a background context to avoid blocking the main thread
+        return await Task.detached(priority: .userInitiated) {
+            let context = ModelContext(container)
+            context.autosaveEnabled = false
 
-            let iconDescriptor = FetchDescriptor<Icon>()
-            let icons = try modelContext.fetch(iconDescriptor)
-            let iconMap = Dictionary(
-                uniqueKeysWithValues: icons.compactMap { icon in
-                    icon.iconData != nil ? (icon.identifier, icon.iconData!) : nil
+            do {
+                let dailyDescriptor = FetchDescriptor<UsageSession>(
+                    predicate: #Predicate<UsageSession> { session in
+                        session.startTime >= startOfDay && session.startTime < endOfDay && session.endTime != nil
+                    },
+                    sortBy: [
+                        SortDescriptor(\.type),
+                        SortDescriptor(\.identifier),
+                        SortDescriptor(\.startTime),
+                    ]
+                )
+
+                let dailyResult = try context.fetch(dailyDescriptor)
+                let appSessions = dailyResult.filter { $0.type == "app" }
+                let websiteSessions = dailyResult.filter { $0.type == "website" }
+
+                // Collect unique identifiers to fetch only needed icons
+                var neededIdentifiers = Set<String>()
+                for session in dailyResult {
+                    neededIdentifiers.insert(session.identifier)
                 }
-            )
+                let identifiersArray = Array(neededIdentifiers)
 
-            let dailyResult = try modelContext.fetch(dailyDescriptor)
-            let appSessions = dailyResult.filter { $0.type == "app" }
-            let websiteSessions = dailyResult.filter { $0.type == "website" }
+                let iconDescriptor = FetchDescriptor<Icon>(
+                    predicate: #Predicate<Icon> { icon in
+                        identifiersArray.contains(icon.identifier)
+                    }
+                )
+                let icons = try context.fetch(iconDescriptor)
+                let iconMap = Dictionary(
+                    uniqueKeysWithValues: icons.compactMap { icon in
+                        icon.iconData != nil ? (icon.identifier, icon.iconData!) : nil
+                    }
+                )
 
-            let workPeriods = computeWorkPeriods(from: appSessions)
-            let totalActiveTime = appSessions.reduce(0) { $0 + $1.duration }
-            let topApps = aggregateAppSessions(appSessions, iconMap: iconMap)
-            let topWebsites = aggregateWebsiteSessions(websiteSessions, iconMap: iconMap)
+                let workPeriods = ContentView.computeWorkPeriods(from: appSessions)
+                let totalActiveTime = appSessions.reduce(0) { $0 + $1.duration }
+                let topApps = ContentView.aggregateAppSessions(appSessions, iconMap: iconMap)
+                let topWebsites = ContentView.aggregateWebsiteSessions(websiteSessions, iconMap: iconMap)
 
-            return DailyDataResults(
-                workPeriods: workPeriods,
-                totalActiveTime: totalActiveTime,
-                topApps: topApps,
-                topWebsites: topWebsites
-            )
-        } catch {
-            handleError(error, context: "Failed to load daily data")
-            return DailyDataResults(
-                workPeriods: [],
-                totalActiveTime: 0,
-                topApps: [],
-                topWebsites: []
-            )
-        }
+                return DailyDataResults(
+                    workPeriods: workPeriods,
+                    totalActiveTime: totalActiveTime,
+                    topApps: topApps,
+                    topWebsites: topWebsites
+                )
+            } catch {
+                return DailyDataResults(
+                    workPeriods: [],
+                    totalActiveTime: 0,
+                    topApps: [],
+                    topWebsites: []
+                )
+            }
+        }.value
     }
 
-    @MainActor
     private func fetchWeeklyData() async -> WeeklyDataResults {
         let calendar = Calendar.current
         let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: selectedDate)?.start ?? selectedDate
         let endOfWeek = calendar.date(byAdding: .weekOfYear, value: 1, to: startOfWeek)!
+        let container = modelContext.container
 
-        do {
-            let weeklyDescriptor = FetchDescriptor<UsageSession>(
-                predicate: #Predicate<UsageSession> { session in
-                    session.startTime >= startOfWeek && session.startTime < endOfWeek && session.type == "app" && session.endTime != nil
-                },
-                sortBy: [SortDescriptor(\.startTime)]
-            )
+        // Run all DB work on a background context to avoid blocking the main thread
+        return await Task.detached(priority: .userInitiated) {
+            let context = ModelContext(container)
+            context.autosaveEnabled = false
 
-            let weeklyWebsiteDescriptor = FetchDescriptor<UsageSession>(
-                predicate: #Predicate<UsageSession> { session in
-                    session.startTime >= startOfWeek && session.startTime < endOfWeek && session.type == "website" && session.endTime != nil
-                },
-                sortBy: [SortDescriptor(\.startTime)]
-            )
+            do {
+                let weeklyDescriptor = FetchDescriptor<UsageSession>(
+                    predicate: #Predicate<UsageSession> { session in
+                        session.startTime >= startOfWeek && session.startTime < endOfWeek && session.type == "app" && session.endTime != nil
+                    },
+                    sortBy: [SortDescriptor(\.startTime)]
+                )
 
-            let iconDescriptor = FetchDescriptor<Icon>()
-            let icons = try modelContext.fetch(iconDescriptor)
-            let iconMap = Dictionary(
-                uniqueKeysWithValues: icons.compactMap { icon in
-                    icon.iconData != nil ? (icon.identifier, icon.iconData!) : nil
-                }
-            )
+                let weeklyWebsiteDescriptor = FetchDescriptor<UsageSession>(
+                    predicate: #Predicate<UsageSession> { session in
+                        session.startTime >= startOfWeek && session.startTime < endOfWeek && session.type == "website" && session.endTime != nil
+                    },
+                    sortBy: [SortDescriptor(\.startTime)]
+                )
 
-            let weeklyResult = try modelContext.fetch(weeklyDescriptor)
-            let weeklyWebsiteResult = try modelContext.fetch(weeklyWebsiteDescriptor)
+                let weeklyResult = try context.fetch(weeklyDescriptor)
+                let weeklyWebsiteResult = try context.fetch(weeklyWebsiteDescriptor)
 
-            let weeklyActivity = computeWeeklyActivity(from: weeklyResult)
-            let weeklyTotalActiveTime = weeklyResult.reduce(0) { $0 + $1.duration }
-            let weeklyTopApps = aggregateAppSessions(weeklyResult, iconMap: iconMap)
-            let weeklyTopWebsites = aggregateWebsiteSessions(weeklyWebsiteResult, iconMap: iconMap)
+                // Collect unique identifiers to fetch only needed icons
+                var neededIdentifiers = Set<String>()
+                for session in weeklyResult { neededIdentifiers.insert(session.identifier) }
+                for session in weeklyWebsiteResult { neededIdentifiers.insert(session.identifier) }
+                let identifiersArray = Array(neededIdentifiers)
 
-            return WeeklyDataResults(
-                weeklyActivity: weeklyActivity,
-                weeklyTotalActiveTime: weeklyTotalActiveTime,
-                weeklyTopApps: weeklyTopApps,
-                weeklyTopWebsites: weeklyTopWebsites
-            )
-        } catch {
-            handleError(error, context: "Failed to load weekly data")
-            return WeeklyDataResults(
-                weeklyActivity: [:],
-                weeklyTotalActiveTime: 0,
-                weeklyTopApps: [],
-                weeklyTopWebsites: []
-            )
-        }
+                let iconDescriptor = FetchDescriptor<Icon>(
+                    predicate: #Predicate<Icon> { icon in
+                        identifiersArray.contains(icon.identifier)
+                    }
+                )
+                let icons = try context.fetch(iconDescriptor)
+                let iconMap = Dictionary(
+                    uniqueKeysWithValues: icons.compactMap { icon in
+                        icon.iconData != nil ? (icon.identifier, icon.iconData!) : nil
+                    }
+                )
+
+                let weeklyActivity = ContentView.computeWeeklyActivity(from: weeklyResult)
+                let weeklyTotalActiveTime = weeklyResult.reduce(0) { $0 + $1.duration }
+                let weeklyTopApps = ContentView.aggregateAppSessions(weeklyResult, iconMap: iconMap)
+                let weeklyTopWebsites = ContentView.aggregateWebsiteSessions(weeklyWebsiteResult, iconMap: iconMap)
+
+                return WeeklyDataResults(
+                    weeklyActivity: weeklyActivity,
+                    weeklyTotalActiveTime: weeklyTotalActiveTime,
+                    weeklyTopApps: weeklyTopApps,
+                    weeklyTopWebsites: weeklyTopWebsites
+                )
+            } catch {
+                return WeeklyDataResults(
+                    weeklyActivity: [:],
+                    weeklyTotalActiveTime: 0,
+                    weeklyTopApps: [],
+                    weeklyTopWebsites: []
+                )
+            }
+        }.value
     }
 
     // MARK: - Session Data Processing
 
-    private func computeWorkPeriods(from sessions: [UsageSession]) -> [(startTime: Date, endTime: Date, duration: TimeInterval)] {
+    private nonisolated static func computeWorkPeriods(from sessions: [UsageSession]) -> [(startTime: Date, endTime: Date, duration: TimeInterval)] {
         // Filter out sessions without end times and sort by start time
         let completedSessions = sessions.compactMap { session -> (Date, Date)? in
             guard let endTime = session.endTime else { return nil }
@@ -593,7 +644,7 @@ struct ContentView: View {
         return result
     }
 
-    private func aggregateAppSessions(_ sessions: [UsageSession], iconMap: [String: Data]) -> [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)] {
+    private nonisolated static func aggregateAppSessions(_ sessions: [UsageSession], iconMap: [String: Data]) -> [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)] {
         var appData: [String: (name: String, totalTime: TimeInterval)] = [:]
 
         for session in sessions {
@@ -614,7 +665,7 @@ struct ContentView: View {
         return result
     }
 
-    private func aggregateWebsiteSessions(_ sessions: [UsageSession], iconMap: [String: Data]) -> [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)] {
+    private nonisolated static func aggregateWebsiteSessions(_ sessions: [UsageSession], iconMap: [String: Data]) -> [(identifier: String, name: String, iconData: Data?, totalTime: TimeInterval)] {
         var websiteData: [String: (name: String, totalTime: TimeInterval)] = [:]
 
         for session in sessions {
@@ -635,7 +686,7 @@ struct ContentView: View {
         return result
     }
 
-    private func computeWeeklyActivity(from sessions: [UsageSession]) -> [String: TimeInterval] {
+    private nonisolated static func computeWeeklyActivity(from sessions: [UsageSession]) -> [String: TimeInterval] {
         var weeklyActivity: [String: TimeInterval] = [:]
         let calendar = Calendar.current
 

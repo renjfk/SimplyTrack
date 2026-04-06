@@ -99,14 +99,15 @@ class IPCService: NSObject, @unchecked Sendable {
     /// This method returns the app's version string from the main bundle.
     /// It also serves as a connectivity check - if this method succeeds,
     /// it indicates the main app is running and IPC communication is working.
+    /// Reads the version directly from the bundle to avoid depending on the main thread.
     ///
     /// - Parameter completion: Completion handler called with the version string
     ///   - version: Current app version (e.g., "1.2.3"), never nil
     func getVersion(completion: @escaping (String) -> Void) {
-        Task { @MainActor in
-            let version = UpdateManager.shared.getCurrentVersion()
-            completion(version)
-        }
+        // Read version directly from bundle info dictionary to avoid @MainActor dependency.
+        // This prevents deadlocks when the main thread is busy with UI/DB work.
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
+        completion(version)
     }
 }
 
@@ -351,12 +352,12 @@ private final class IPCChannelHandler: ChannelInboundHandler {
     }
 
     private func handleGetVersion() async -> IPCMessage {
-        return await withCheckedContinuation { continuation in
-            service.getVersion { version in
-                let response = IPCMessage(type: .response, body: version.data(using: .utf8) ?? Data())
-                continuation.resume(returning: response)
-            }
+        // getVersion is now synchronous (reads from bundle), no need for continuation bridging
+        var response: IPCMessage?
+        service.getVersion { version in
+            response = IPCMessage(type: .response, body: version.data(using: .utf8) ?? Data())
         }
+        return response ?? IPCMessage(type: .error, body: "Failed to get version".data(using: .utf8) ?? Data())
     }
 }
 

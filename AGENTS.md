@@ -9,7 +9,7 @@ Implementation details belong in code comments, not here.
 **SimplyTrack** is a native macOS menu bar app built with Swift, SwiftUI, and SwiftData.
 Tracks app and website usage locally. No web tech stack (no JS/TS/npm).
 
-- **Min deployment target:** macOS 14.6 (per-target override; project-level default is 15.5)
+- **Min deployment target:** macOS 15.0
 - **Build system:** Xcode (`.xcodeproj`, no SPM `Package.swift` at root)
 - **SPM dependencies:** `modelcontextprotocol/swift-sdk` (>=0.10.2), `apple/swift-nio` (>=2.86.2)
 

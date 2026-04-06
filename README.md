@@ -51,7 +51,7 @@ insights without the bloat.
 
 ### Requirements
 
-- macOS 14.0 (Sonoma) or later
+- macOS 15.0 (Sequoia) or later
 - Apple Silicon Mac
 
 ### Download

@@ -25,6 +25,22 @@ class SessionPersistenceService {
 
     private var pendingIcons: [(identifier: String, iconData: Data)] = []
 
+    /// Maximum number of retry attempts before dropping failed items
+    private static let maxRetryAttempts = 3
+    /// Tracks retry count to prevent unbounded re-queuing on persistent DB failure
+    private var retryCount = 0
+
+    // MARK: - In-memory Icon Staleness Cache
+
+    /// Caches known-fresh icon identifiers to avoid querying the database every second.
+    /// Entries are identifiers whose icons are known to exist and are not stale.
+    /// Cleared periodically so stale icons are eventually re-checked.
+    private var freshIconIdentifiers: Set<String> = []
+    /// Timestamp of the last cache clear, used to periodically invalidate the staleness cache
+    private var lastFreshIconCacheClear = Date()
+    /// How often to clear the in-memory icon cache (1 hour)
+    private static let freshIconCacheInterval: TimeInterval = 3600
+
     /// Initializes the persistence service with the required SwiftData container.
     /// - Parameter modelContainer: SwiftData container for database operations
     init(modelContainer: ModelContainer) {
@@ -41,18 +57,30 @@ class SessionPersistenceService {
     }
 
     /// Queues icon data for batch saving if it needs updating.
-    /// Performs intelligent caching to avoid unnecessary database writes.
+    /// Uses a pure in-memory cache to avoid any database queries on the main thread.
+    /// The actual DB staleness check happens in the background save transaction.
     /// - Parameters:
     ///   - identifier: Unique identifier for the icon (bundle ID or domain)
     ///   - iconData: PNG data of the icon
     func queueIconData(identifier: String, iconData: Data) {
-        if shouldUpdateIcon(identifier: identifier) {
-            pendingIcons.append((identifier: identifier, iconData: iconData))
+        // Avoid duplicate queue entries for the same identifier
+        guard !pendingIcons.contains(where: { $0.identifier == identifier }) else { return }
+
+        // Periodically clear the freshness cache so stale icons are eventually re-checked
+        let now = Date()
+        if now.timeIntervalSince(lastFreshIconCacheClear) > Self.freshIconCacheInterval {
+            freshIconIdentifiers.removeAll()
+            lastFreshIconCacheClear = now
         }
+
+        // Fast path: skip if we know this icon is fresh (not stale, exists in DB)
+        guard !freshIconIdentifiers.contains(identifier) else { return }
+
+        pendingIcons.append((identifier: identifier, iconData: iconData))
     }
 
     /// Performs an atomic save of all queued sessions and icons.
-    /// Clears the queues and executes a single database transaction.
+    /// Clears the queues and executes a single database transaction on a background context.
     /// Called automatically every 30 seconds by TrackingService.
     func performAtomicSave() async {
         // Capture current queue contents synchronously on main actor
@@ -76,16 +104,28 @@ class SessionPersistenceService {
     // MARK: - Private Implementation
 
     private func saveSessionsAndIcons(_ sessions: [UsageSession], _ icons: [(identifier: String, iconData: Data)]) async {
-        do {
-            // Execute all operations in a single database transaction
-            try modelContainer.mainContext.transaction {
+        let container = modelContainer
+
+        // Run DB transaction on a background context to avoid blocking the main thread.
+        // The staleness check for icons also happens here instead of on the main thread.
+        let savedIconIdentifiers: [String] = await Task.detached(priority: .utility) {
+            let context = ModelContext(container)
+            context.autosaveEnabled = false
+
+            do {
                 // Insert all usage sessions
                 for session in sessions {
-                    modelContainer.mainContext.insert(session)
+                    context.insert(session)
                 }
 
-                // Process icon updates and insertions
+                // Filter icons that actually need updating (staleness check on background context)
+                var updatedIdentifiers: [String] = []
                 for iconInfo in icons {
+                    guard Self.iconNeedsUpdate(identifier: iconInfo.identifier, context: context) else {
+                        updatedIdentifiers.append(iconInfo.identifier)  // Still fresh, mark it
+                        continue
+                    }
+
                     let targetIdentifier = iconInfo.identifier
                     let descriptor = FetchDescriptor<Icon>(
                         predicate: #Predicate<Icon> { icon in
@@ -93,53 +133,64 @@ class SessionPersistenceService {
                         }
                     )
 
-                    let existingIcons = try modelContainer.mainContext.fetch(descriptor)
+                    let existingIcons = try context.fetch(descriptor)
                     if let existingIcon = existingIcons.first {
-                        // Update existing icon with new data and timestamp
                         existingIcon.updateIcon(with: iconInfo.iconData)
                     } else {
-                        // Create new icon entry
                         let icon = Icon(identifier: iconInfo.identifier, iconData: iconInfo.iconData)
-                        modelContainer.mainContext.insert(icon)
+                        context.insert(icon)
                     }
+                    updatedIdentifiers.append(iconInfo.identifier)
                 }
+
+                try context.save()
+                return updatedIdentifiers
+            } catch {
+                return []
             }
+        }.value
 
+        if !savedIconIdentifiers.isEmpty || !sessions.isEmpty {
             logger.info("Successfully saved \(sessions.count) sessions and \(icons.count) icons")
+            retryCount = 0
 
-        } catch {
+            // Mark all processed icons as fresh so we skip them on subsequent ticks
+            for identifier in savedIconIdentifiers {
+                freshIconIdentifiers.insert(identifier)
+            }
+        } else if !sessions.isEmpty || !icons.isEmpty {
             let totalItems = sessions.count + icons.count
-            logger.error("Failed to save \(totalItems) items: \(error.localizedDescription)")
+            logger.error("Failed to save \(totalItems) items")
 
-            // Re-queue failed items for automatic retry on next save cycle
-            pendingSessions.append(contentsOf: sessions)
-            pendingIcons.append(contentsOf: icons)
+            // Re-queue failed items with a retry limit to prevent unbounded growth
+            retryCount += 1
+            if retryCount <= Self.maxRetryAttempts {
+                pendingSessions.append(contentsOf: sessions)
+                pendingIcons.append(contentsOf: icons)
+                logger.warning("Re-queued items for retry (\(self.retryCount)/\(Self.maxRetryAttempts))")
+            } else {
+                logger.error("Dropping \(totalItems) items after \(Self.maxRetryAttempts) failed retries")
+                retryCount = 0
+            }
         }
     }
 
-    private func shouldUpdateIcon(identifier: String) -> Bool {
-        // Avoid duplicate queue entries for the same identifier
-        if pendingIcons.contains(where: { $0.identifier == identifier }) {
-            return false
-        }
+    /// Checks whether an icon needs updating on a background context during the save transaction.
+    /// Returns true if the icon is missing, has no data, or is stale (older than a week).
+    nonisolated private static func iconNeedsUpdate(identifier: String, context: ModelContext) -> Bool {
+        let descriptor = FetchDescriptor<Icon>(
+            predicate: #Predicate<Icon> { icon in
+                icon.identifier == identifier
+            }
+        )
 
         do {
-            let descriptor = FetchDescriptor<Icon>(
-                predicate: #Predicate<Icon> { icon in
-                    icon.identifier == identifier
-                }
-            )
-
-            let existingIcons = try modelContainer.mainContext.fetch(descriptor)
+            let existingIcons = try context.fetch(descriptor)
             if let existingIcon = existingIcons.first {
-                // Update if icon is stale (older than a week) or missing data
                 return existingIcon.needsUpdate || existingIcon.iconData == nil
-            } else {
-                // No existing icon found, need to create one
-                return true
             }
+            return true
         } catch {
-            // On database error, err on the side of updating to ensure we have icons
             return true
         }
     }
