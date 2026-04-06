@@ -1,5 +1,5 @@
 {
-  "title": "SimplyTrack",
+  "title": "{{TITLE}}",
   "icon": "{{APP_PATH}}/Contents/Resources/AppIcon.icns",
   "icon-size": 160,
   "background": "dmg-background.png",

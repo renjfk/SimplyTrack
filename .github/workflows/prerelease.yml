@@ -28,6 +28,7 @@ jobs:
       head_ref: ${{ steps.resolve.outputs.head_ref }}
       release_tag: ${{ steps.resolve.outputs.tag }}
       version: ${{ steps.resolve.outputs.version }}
+      dmg_title: ${{ steps.resolve.outputs.dmg_title }}
 
     steps:
       - name: Resolve
@@ -59,11 +60,22 @@ jobs:
             TAG="v${BASE}-${SAFE_REF}.${SHORT_SHA}"
           fi
 
+          # DMG volume name (appdmg enforces 27-char limit)
+          if [ -n "$PR_NUMBER" ]; then
+            PREFIX="SimplyTrack v${BASE}-pr${PR_NUMBER}."
+            SHA_LEN=$(( 27 - ${#PREFIX} ))
+            DMG_TITLE="${PREFIX}${SHORT_SHA:0:$SHA_LEN}"
+          else
+            # Drop version to maximise space for branch name
+            DMG_TITLE="SimplyTrack ${SAFE_REF:0:15}"
+          fi
+
           echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
           echo "head_sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
           echo "head_ref=$HEAD_REF" >> "$GITHUB_OUTPUT"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "dmg_title=$DMG_TITLE" >> "$GITHUB_OUTPUT"
           echo "Prerelease: $TAG ($HEAD_REF @ $SHORT_SHA)"
 
   prerelease:
@@ -197,10 +209,11 @@ jobs:
       - name: Create, notarize and staple DMG
         run: |
           VERSION="${{ needs.resolve.outputs.version }}"
+          DMG_TITLE="${{ needs.resolve.outputs.dmg_title }}"
           APP_PATH="${{ steps.locate_app.outputs.app-path }}"
           CERT_IDENTITY="${{ steps.get_cert.outputs.cert-identity }}"
 
-          sed "s|{{APP_PATH}}|$APP_PATH|g; s|{{CERT_IDENTITY}}|$CERT_IDENTITY|g" appdmg.template.json > appdmg_temp.json
+          sed "s|{{TITLE}}|$DMG_TITLE|g; s|{{APP_PATH}}|$APP_PATH|g; s|{{CERT_IDENTITY}}|$CERT_IDENTITY|g" appdmg.template.json > appdmg_temp.json
 
           appdmg appdmg_temp.json "SimplyTrack-$VERSION.dmg"
           rm appdmg_temp.json
