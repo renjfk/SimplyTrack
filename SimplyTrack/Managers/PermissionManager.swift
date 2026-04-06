@@ -41,9 +41,6 @@ class PermissionManager: ObservableObject {
         "com.google.Chrome",
         "com.microsoft.edgemac",
         "company.thebrowser.Browser",
-        "org.mozilla.firefox",
-        "com.operasoftware.Opera",
-        "com.brave.Browser",
     ]
 
     private init() {

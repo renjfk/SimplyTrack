@@ -82,6 +82,10 @@ Verify changes: build + test with zero failures. Always run `swift-format --in-p
 - **Unit tests**: Swift Testing (`import Testing`, `@Test`, `#expect(...)`) with `@testable import SimplyTrack`
 - **UI tests**: XCTest (`import XCTest`) - do NOT use `@testable import`, runs against built app
 
+## Issue Templates
+
+- When adding a new browser to `PermissionManager.supportedBrowserBundleIds` or `Services/Browsers/`, also update the browser dropdown in `.github/ISSUE_TEMPLATE/bug_report.yml`.
+
 ## CI/CD
 
 - **CI**: `.github/workflows/ci.yml` runs on push to `main` and all PRs (format check, build, unit tests)
