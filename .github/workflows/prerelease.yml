@@ -200,7 +200,7 @@ jobs:
           APP_PATH="${{ steps.locate_app.outputs.app-path }}"
           CERT_IDENTITY="${{ steps.get_cert.outputs.cert-identity }}"
 
-          sed "s|{{TITLE}}|SimplyTrack v$VERSION|g; s|{{APP_PATH}}|$APP_PATH|g; s|{{CERT_IDENTITY}}|$CERT_IDENTITY|g" appdmg.template.json > appdmg_temp.json
+          sed "s|{{APP_PATH}}|$APP_PATH|g; s|{{CERT_IDENTITY}}|$CERT_IDENTITY|g" appdmg.template.json > appdmg_temp.json
 
           appdmg appdmg_temp.json "SimplyTrack-$VERSION.dmg"
           rm appdmg_temp.json
