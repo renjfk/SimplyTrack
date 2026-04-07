@@ -12,21 +12,45 @@ import Foundation
 import SwiftUI
 
 actor FaviconCacheActor {
+    /// Maximum number of favicons to keep in memory
+    private static let maxEntries = 200
+
     private var cache: [String: Data] = [:]
+    /// Tracks access order for LRU eviction (most recent at the end)
+    private var accessOrder: [String] = []
 
     /// Retrieves cached favicon data for a domain.
     /// - Parameter key: Domain name used as cache key
     /// - Returns: Cached favicon data if available, nil otherwise
     func get(_ key: String) -> Data? {
-        return cache[key]
+        guard let data = cache[key] else { return nil }
+        // Move to end of access order (most recently used)
+        if let index = accessOrder.firstIndex(of: key) {
+            accessOrder.remove(at: index)
+        }
+        accessOrder.append(key)
+        return data
     }
 
-    /// Stores favicon data in the cache for a domain.
+    /// Stores favicon data in the cache for a domain, evicting least-recently-used entries if needed.
     /// - Parameters:
     ///   - key: Domain name to use as cache key
     ///   - value: Favicon data to cache
     func set(_ key: String, _ value: Data) {
+        // If key already exists, remove from current position in access order
+        if cache[key] != nil {
+            if let index = accessOrder.firstIndex(of: key) {
+                accessOrder.remove(at: index)
+            }
+        }
         cache[key] = value
+        accessOrder.append(key)
+
+        // Evict least-recently-used entries when over capacity
+        while cache.count > Self.maxEntries, let oldest = accessOrder.first {
+            accessOrder.removeFirst()
+            cache.removeValue(forKey: oldest)
+        }
     }
 }
 
