@@ -36,6 +36,7 @@ struct GitHubRelease: Codable {
     let name: String
     let body: String
     let publishedAt: String
+    let prerelease: Bool
     let assets: [GitHubAsset]
 
     enum CodingKeys: String, CodingKey {
@@ -43,6 +44,7 @@ struct GitHubRelease: Codable {
         case name
         case body
         case publishedAt = "published_at"
+        case prerelease
         case assets
     }
 }
@@ -242,7 +244,10 @@ class UpdateManager: ObservableObject {
             throw UpdateError.invalidResponse
         }
 
-        let releases = try JSONDecoder().decode([GitHubRelease].self, from: data)
+        let allReleases = try JSONDecoder().decode([GitHubRelease].self, from: data)
+
+        // Exclude prereleases from release notes
+        let releases = allReleases.filter { !$0.prerelease }
 
         // Filter releases between lastVersion and currentVersion
         let relevantReleases = filterReleasesBetweenVersions(
