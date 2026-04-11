@@ -50,8 +50,10 @@ class SafariBrowser: BaseBrowser {
         if let error = scriptResult.error {
             // Handle permission-related errors
             if scriptResult.errorCode == -1719 {
-                // Accessibility permission denied
-                PermissionManager.shared.handleAccessibilityPermissionResult(success: false)
+                // Invalid index - transient race condition when menu items change during polling.
+                // Silently ignore; the next polling cycle will succeed.
+                logger.debug("Safari System Events transient error (invalid index): \(error.description)")
+                return false
             } else if scriptResult.errorCode == -1743 || scriptResult.errorCode == -1744 {
                 // System Events permission errors
                 PermissionManager.shared.handleSystemEventsPermissionResult(success: false)

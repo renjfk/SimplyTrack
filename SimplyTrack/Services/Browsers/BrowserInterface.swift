@@ -60,6 +60,12 @@ class BaseBrowser: BrowserInterface {
             // Handle permission-related errors
             if scriptResult.errorCode == -1743 || scriptResult.errorCode == -1744 {
                 PermissionManager.shared.handleBrowserPermissionResult(success: false)
+            } else if scriptResult.errorCode == -1719 {
+                // Invalid index - transient race condition when tabs/windows change during polling.
+                // Silently ignore; the next polling cycle will succeed.
+                logger.debug(
+                    "Browser (\(self.displayName)) transient AppleScript error (invalid index): \(error.description)"
+                )
             } else {
                 // Log non-permission AppleScript errors using Logger
                 logger.error("Browser (\(self.displayName)) AppleScript error: \(error.description)")
