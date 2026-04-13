@@ -100,6 +100,26 @@ struct PrivacySettingsView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
+
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        Text("Brave Private")
+                        Spacer()
+                        Text("Supported")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        Text("Firefox Private Browsing")
+                        Spacer()
+                        Text("Supported")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
             .formStyle(.grouped)
