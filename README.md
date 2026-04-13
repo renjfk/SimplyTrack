@@ -39,7 +39,7 @@ insights without the bloat.
 
 ## ✨ Features
 
-- **📊 App & Website Tracking** - Monitor time spent in applications and websites (Safari, Chrome, Edge supported)
+- **📊 App & Website Tracking** - Monitor time spent in applications and websites (Safari, Chrome, Edge, Arc, Brave, Firefox supported)
 - **📈 Visual Analytics** - Charts showing daily/weekly activity patterns
 - **🔔 Smart Notifications** - Optional AI-powered daily summary notifications with usage insights
 - **🤖 AI Integration** - Built-in MCP server for seamless integration with Claude and other AI assistants
@@ -83,17 +83,25 @@ SimplyTrack requires several macOS permissions to function properly:
 
 1. **Automation Permission**: To track browser activity
     - System Preferences → Privacy & Security → Automation
-    - Enable SimplyTrack for your browsers (Safari, Chrome, Edge)
+    - Enable SimplyTrack for your browsers (Safari, Chrome, Edge, Arc, Brave, Firefox)
 
-2. **System Events Permission**: For Safari private browsing detection
+2. **System Events Permission**: For Safari and Firefox browser integration
     - System Preferences → Privacy & Security → Automation
     - Enable SimplyTrack for System Events
 
-3. **Accessibility Permission**: For Safari private browsing detection
+3. **Accessibility Permission**: For Safari and Firefox browser integration
     - System Preferences → Privacy & Security → Accessibility
     - Enable SimplyTrack
 
-4. **Notifications** (Optional): For update notifications
+4. **Firefox Additional Setup**: Firefox does not expose tab URLs through its scripting interface, so
+   SimplyTrack reads the address bar via the macOS Accessibility API. This requires a one-time Firefox
+   configuration change:
+    1. Open Firefox and navigate to `about:config`
+    2. Accept the risk warning if prompted
+    3. Search for `accessibility.force_disabled`
+    4. Set the value to `-1`
+
+5. **Notifications** (Optional): For update notifications
     - System Preferences → Notifications & Focus → SimplyTrack
 
 ### Permission Setup
