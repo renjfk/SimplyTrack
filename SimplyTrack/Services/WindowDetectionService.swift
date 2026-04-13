@@ -42,6 +42,13 @@ class WindowDetectionService {
     /// Filters out tiny helper windows, status items, and invisible accessory windows.
     private static let minimumWindowDimension: CGFloat = 50.0
 
+    /// Minimum dimensions (in points) for a floating window to be considered an interactive overlay
+    /// rather than a transient notification popup. Apps like Outlook, Teams, and Slack show
+    /// notification banners as floating windows, which should not override the frontmost app.
+    /// Interactive floating panels (e.g., Ghostty quick terminal, 1Password Quick Access) are
+    /// typically at least 200x200 points.
+    private static let minimumFloatingWindowDimension: CGFloat = 200.0
+
     /// Cache of PID to NSRunningApplication mappings to avoid repeated lookups.
     private var appCache: [pid_t: NSRunningApplication] = [:]
 
@@ -99,9 +106,18 @@ class WindowDetectionService {
                 return nil
             }
 
-            // If the window is at a floating level or above, it's an overlay window
-            // from a non-frontmost app — this is what we want to detect.
+            // If the window is at a floating level or above, it could be an overlay window
+            // from a non-frontmost app.
             if window.level >= Self.floatingWindowLevel {
+                // Skip small floating windows — these are typically transient notification
+                // popups (e.g., Outlook reminders, Teams/Slack notifications) rather than
+                // interactive floating panels. Continue scanning for the next window below.
+                if window.width < Self.minimumFloatingWindowDimension
+                    || window.height < Self.minimumFloatingWindowDimension
+                {
+                    continue
+                }
+
                 guard let app = runningApplication(for: window.pid) else {
                     continue
                 }
