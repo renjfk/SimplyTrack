@@ -9,6 +9,7 @@ import AppKit
 import Combine
 import SwiftData
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Main application interface displayed in the menu bar popover.
 /// Coordinates usage data visualization, permission management, and user interactions.
@@ -333,7 +334,8 @@ struct ContentView: View {
 
             SettingsMenuView(
                 viewMode: viewMode,
-                showingClearDataConfirmation: $showingClearDataConfirmation
+                showingClearDataConfirmation: $showingClearDataConfirmation,
+                exportCSV: exportCSV
             )
         }
         .padding(.horizontal, 16)
@@ -782,6 +784,76 @@ struct ContentView: View {
     private func openNotificationSettings() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.notifications") {
             NSWorkspace.shared.open(url)
+        }
+    }
+
+    private func exportCSV() {
+        let savePanel = NSSavePanel()
+        savePanel.allowedContentTypes = [.commaSeparatedText]
+        savePanel.canCreateDirectories = true
+        savePanel.isExtensionHidden = false
+        savePanel.nameFieldStringValue = csvExportFileName
+
+        guard savePanel.runModal() == .OK, let url = savePanel.url else { return }
+
+        do {
+            let rows = try fetchCSVExportRows(for: selectedDate, period: viewMode)
+            let csv = CSVExportService.csvString(for: rows)
+            try csv.write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            handleError(error, context: "Failed to export CSV")
+        }
+    }
+
+    private var csvExportFileName: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+
+        if viewMode == .day {
+            return "simplytrack-day-\(formatter.string(from: selectedDate)).csv"
+        }
+
+        let calendar = Calendar.current
+        let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: selectedDate)?.start ?? selectedDate
+        let endOfWeek = calendar.date(byAdding: .day, value: 6, to: startOfWeek) ?? selectedDate
+        return "simplytrack-week-\(formatter.string(from: startOfWeek))-\(formatter.string(from: endOfWeek)).csv"
+    }
+
+    private func fetchCSVExportRows(for date: Date, period: ViewMode) throws -> [CSVExportService.Row] {
+        let calendar = Calendar.current
+        let startDate: Date
+        let endDate: Date
+
+        if period == .day {
+            startDate = calendar.startOfDay(for: date)
+            endDate = calendar.date(byAdding: .day, value: 1, to: startDate)!
+        } else {
+            startDate = calendar.dateInterval(of: .weekOfYear, for: date)?.start ?? date
+            endDate = calendar.date(byAdding: .weekOfYear, value: 1, to: startDate)!
+        }
+
+        let descriptor = FetchDescriptor<UsageSession>(
+            predicate: #Predicate<UsageSession> { session in
+                session.startTime >= startDate && session.startTime < endDate && session.endTime != nil
+            },
+            sortBy: [
+                SortDescriptor(\.startTime),
+                SortDescriptor(\.type),
+                SortDescriptor(\.name),
+            ]
+        )
+
+        return try modelContext.fetch(descriptor).compactMap { session in
+            guard let endTime = session.endTime else { return nil }
+
+            return CSVExportService.Row(
+                startTime: session.startTime,
+                endTime: endTime,
+                category: session.type,
+                name: session.name,
+                identifier: session.identifier,
+                duration: session.duration
+            )
         }
     }
 
