@@ -39,7 +39,7 @@ insights without the bloat.
 
 ## ✨ Features
 
-- **📊 App & Website Tracking** - Monitor time spent in applications and websites (Safari, Chrome, Edge, Arc, Brave, Firefox supported)
+- **📊 App & Website Tracking** - Monitor time spent in applications and websites (Safari, Chrome, Edge, Arc, Brave, Vivaldi, Firefox supported)
 - **📈 Visual Analytics** - Charts showing daily/weekly activity patterns
 - **🔔 Smart Notifications** - Optional AI-powered daily summary notifications with usage insights
 - **🤖 AI Integration** - Built-in MCP server for seamless integration with Claude and other AI assistants
@@ -83,7 +83,7 @@ SimplyTrack requires several macOS permissions to function properly:
 
 1. **Automation Permission**: To track browser activity
     - System Preferences → Privacy & Security → Automation
-    - Enable SimplyTrack for your browsers (Safari, Chrome, Edge, Arc, Brave, Firefox)
+    - Enable SimplyTrack for your browsers (Safari, Chrome, Edge, Arc, Brave, Vivaldi, Firefox)
 
 2. **System Events Permission**: For Safari and Firefox browser integration
     - System Preferences → Privacy & Security → Automation
