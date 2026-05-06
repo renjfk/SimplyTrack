@@ -14,13 +14,14 @@ import NIOPosix
 enum MessageType: UInt8 {
     case getVersion = 0x01
     case getUsageActivity = 0x02
+    case exportCSV = 0x03
     case response = 0x80
     case error = 0x81
 }
 
 /// IPC message structure for Swift-NIO
 struct IPCMessage {
-    static let currentVersion: UInt8 = 1
+    static let currentVersion: UInt8 = 2
 
     let version: UInt8
     let type: MessageType
@@ -43,15 +44,15 @@ private final class IPCProtocolCodec: ByteToMessageDecoder, MessageToByteEncoder
     init() {}
 
     func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-        // Need at least 4 bytes for header: [version:1][type:1][length:2]
-        guard buffer.readableBytes >= 4 else {
+        // Need at least 6 bytes for header: [version:1][type:1][length:4]
+        guard buffer.readableBytes >= 6 else {
             return .needMoreData
         }
 
         let readerIndex = buffer.readerIndex
         guard let version = buffer.readInteger(as: UInt8.self),
             let typeRaw = buffer.readInteger(as: UInt8.self),
-            let bodyLength = buffer.readInteger(endianness: .big, as: UInt16.self),
+            let bodyLength = buffer.readInteger(endianness: .big, as: UInt32.self),
             let type = MessageType(rawValue: typeRaw)
         else {
             buffer.moveReaderIndex(to: readerIndex)  // Reset on error
@@ -83,7 +84,7 @@ private final class IPCProtocolCodec: ByteToMessageDecoder, MessageToByteEncoder
     func encode(data: IPCMessage, out: inout ByteBuffer) throws {
         out.writeInteger(data.version)
         out.writeInteger(data.type.rawValue)
-        out.writeInteger(UInt16(data.body.count), endianness: .big)
+        out.writeInteger(UInt32(data.body.count), endianness: .big)
         out.writeBytes(data.body)
     }
 }
@@ -115,21 +116,30 @@ actor IPCClient {
         let topPercentageBits = topPercentage.bitPattern.bigEndian
         body.append(contentsOf: withUnsafeBytes(of: topPercentageBits) { Array($0) })
 
-        // Add dateString (length + string)
-        if let dateString = dateString {
-            let dateData = dateString.data(using: .utf8) ?? Data()
-            body.append(UInt8(dateData.count))
-            body.append(dateData)
-        } else {
-            body.append(UInt8(0))
-        }
-
-        // Add typeFilter (length + string)
-        let typeFilterData = typeFilter.data(using: .utf8) ?? Data()
-        body.append(UInt8(typeFilterData.count))
-        body.append(typeFilterData)
+        try appendShortString(dateString ?? "", to: &body)
+        try appendShortString(typeFilter, to: &body)
 
         return try await sendMessage(type: .getUsageActivity, body: body)
+    }
+
+    /// Export day or week usage data from the main app as CSV.
+    func exportCSV(dateString: String?, period: String) async throws -> String? {
+        var body = Data()
+
+        try appendShortString(dateString ?? "", to: &body)
+        try appendShortString(period, to: &body)
+
+        return try await sendMessage(type: .exportCSV, body: body)
+    }
+
+    private func appendShortString(_ string: String, to body: inout Data) throws {
+        let data = string.data(using: .utf8) ?? Data()
+        guard data.count <= UInt8.max else {
+            throw NSError(domain: "IPCClient", code: -1, userInfo: [NSLocalizedDescriptionKey: "IPC string parameter is too long"])
+        }
+
+        body.append(UInt8(data.count))
+        body.append(data)
     }
 
     /// Send message to Swift-NIO server and wait for response
