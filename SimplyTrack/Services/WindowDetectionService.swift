@@ -49,6 +49,15 @@ class WindowDetectionService {
     /// typically at least 200x200 points.
     private static let minimumFloatingWindowDimension: CGFloat = 200.0
 
+    /// Bundle identifiers for macOS system UI that should never override the frontmost app.
+    private static let ignoredBundleIds: Set<String> = [
+        "com.apple.dock",
+        "com.apple.loginwindow",
+        "com.apple.Spotlight",
+        "com.apple.notificationcenterui",
+        "com.apple.controlcenter",
+    ]
+
     /// Cache of PID to NSRunningApplication mappings to avoid repeated lookups.
     private var appCache: [pid_t: NSRunningApplication] = [:]
 
@@ -97,6 +106,13 @@ class WindowDetectionService {
 
             // Skip SimplyTrack's own windows
             if window.bundleIdentifier == Bundle.main.bundleIdentifier {
+                continue
+            }
+
+            // Skip macOS system UI even when it appears as a lower-level floating window.
+            if let bundleIdentifier = window.bundleIdentifier,
+                Self.ignoredBundleIds.contains(bundleIdentifier)
+            {
                 continue
             }
 
