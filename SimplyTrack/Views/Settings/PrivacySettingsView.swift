@@ -114,6 +114,16 @@ struct PrivacySettingsView: View {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(.green)
+                        Text("Vivaldi Private")
+                        Spacer()
+                        Text("Supported")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
                         Text("Firefox Private Browsing")
                         Spacer()
                         Text("Supported")
