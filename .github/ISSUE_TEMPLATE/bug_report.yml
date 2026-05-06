@@ -61,7 +61,7 @@ body:
         - Edge
         - Arc
         - Brave
-        - Firefox
+        - Firefox (experimental)
 
     validations:
       required: false
