@@ -11,6 +11,7 @@
 		<string>com.microsoft.edgemac</string>
 		<string>company.thebrowser.Browser</string>
 		<string>com.brave.Browser</string>
+		<string>com.vivaldi.Vivaldi</string>
 		<string>org.mozilla.firefox</string>
 		<string>com.apple.systemevents</string>
 	</array>

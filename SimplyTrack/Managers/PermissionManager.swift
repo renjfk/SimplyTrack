@@ -42,6 +42,7 @@ class PermissionManager: ObservableObject {
         "com.microsoft.edgemac",
         "company.thebrowser.Browser",
         "com.brave.Browser",
+        "com.vivaldi.Vivaldi",
         "org.mozilla.firefox",
     ]
 
