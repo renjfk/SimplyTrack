@@ -138,15 +138,18 @@ class TrackingService {
             let activeBundleId: String
             let activeName: String
             let activeApp: NSRunningApplication
+            let activitySource: String
 
             if let floatingWindow = windowDetectionService.detectTopmostFloatingWindow(frontmostBundleId: bundleId) {
                 activeBundleId = floatingWindow.bundleIdentifier
                 activeName = floatingWindow.name
                 activeApp = floatingWindow.app
+                activitySource = "floating_overlay"
             } else {
                 activeBundleId = bundleId
                 activeName = name
                 activeApp = frontmostApp
+                activitySource = "frontmost_application"
             }
 
             // Skip system UI that shouldn't be tracked (Dock, Spotlight, Control Center, etc.)
@@ -167,6 +170,7 @@ class TrackingService {
             }
 
             // Update or create app usage session
+            logActiveAppChangeIfNeeded(identifier: activeBundleId, name: activeName, source: activitySource)
             updateAppSession(identifier: activeBundleId, name: activeName, now: now)
         }
 
@@ -213,6 +217,14 @@ class TrackingService {
             // No active session, start new one
             currentAppSession = UsageSession(type: .app, identifier: identifier, name: name, startTime: now)
         }
+    }
+
+    private func logActiveAppChangeIfNeeded(identifier: String, name: String, source: String) {
+        guard currentAppSession?.identifier != identifier else { return }
+
+        logger.log(
+            "activity_tracking decision=active_app_changed source=\(source, privacy: .public) bundle=\(identifier, privacy: .public) name=\(name, privacy: .public)"
+        )
     }
 
     private func updateWebsiteSession(identifier: String, name: String, now: Date) {

@@ -8,7 +8,6 @@
 import AppKit
 import CoreGraphics
 import Foundation
-import os
 
 /// Represents a detected active window with its owning application info.
 struct DetectedWindow {
@@ -27,8 +26,6 @@ struct DetectedWindow {
 /// This handles cases like Ghostty quick terminal, Spotlight, 1Password Quick Access, etc.
 @MainActor
 class WindowDetectionService {
-
-    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "WindowDetectionService")
 
     /// Normal window level (kCGNormalWindowLevel = 0)
     private static let normalWindowLevel = Int(CGWindowLevelForKey(.normalWindow))
@@ -116,9 +113,6 @@ class WindowDetectionService {
             if let bundleIdentifier = window.bundleIdentifier,
                 Self.ignoredBundleIds.contains(bundleIdentifier)
             {
-                logger.log(
-                    "floating_window_detection decision=skip_system_ui bundle=\(bundleIdentifier, privacy: .public) owner=\(window.ownerName ?? "unknown", privacy: .public) level=\(window.level, privacy: .public) width=\(window.width, privacy: .public) height=\(window.height, privacy: .public)"
-                )
                 continue
             }
 
@@ -145,10 +139,6 @@ class WindowDetectionService {
                 }
 
                 let name = app.localizedName ?? window.ownerName ?? "Unknown"
-
-                logger.log(
-                    "floating_window_detection decision=accept_overlay bundle=\(window.bundleIdentifier ?? "unknown", privacy: .public) owner=\(window.ownerName ?? "unknown", privacy: .public) level=\(window.level, privacy: .public) width=\(window.width, privacy: .public) height=\(window.height, privacy: .public)"
-                )
 
                 return DetectedWindow(
                     bundleIdentifier: window.bundleIdentifier ?? "unknown.\(window.ownerName ?? "app")",
