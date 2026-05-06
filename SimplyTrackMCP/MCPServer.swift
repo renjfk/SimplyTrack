@@ -51,75 +51,7 @@ actor MCPServer {
 
         // Register tool list handler
         await server.withMethodHandler(ListTools.self) { _ in
-            let tools = [
-                Tool(
-                    name: "get_usage_activity",
-                    description: """
-                        Get user's application or website usage data showing time spent on different activities.
-
-                        This tool retrieves detailed usage statistics from SimplyTrack, including:
-                        - Time spent on each application or website
-                        - Percentage of total usage time
-                        - Activity duration and frequency
-                        - Aggregated data for productivity analysis
-
-                        The data is formatted as human-readable text suitable for analysis and insights.
-                        Perfect for understanding work patterns, identifying productivity trends, and time management.
-
-                        ## Response Format:
-
-                        The tool returns data in a simple pipe-separated format: `name:duration|name:duration|...|Total:duration`
-
-                        ### Example Responses:
-
-                        **Application Usage (typeFilter: "app"):**
-                        ```
-                        Xcode:3h45m|Safari:2h18m|Terminal:1h20m|Total:7h23m
-                        ```
-
-                        **Website Usage (typeFilter: "website"):**
-                        ```
-                        github.com:1h35m|stackoverflow.com:58m|docs.swift.org:42m|claude.ai:37m|Total:4h12m
-                        ```
-
-                        **No Data Available:**
-                        ```
-                        No usage data found
-                        ```
-
-                        **Format Details:**
-                        - Each entry: `activityName:duration`
-                        - Duration format examples:
-                          • `3h45m` = 3 hours and 45 minutes
-                          • `2h0m` = exactly 2 hours (0 minutes)
-                          • `45m` = 45 minutes (less than 1 hour)
-                          • `5m` = 5 minutes
-                        - Activities are ordered by usage time (highest first)
-                        - Final entry is always `Total:duration` showing total tracked time
-                        - Activities included based on topPercentage (default 80% of total usage time)
-
-                        Returns: Pipe-separated usage data string as shown above, or "No usage data found" if no data exists.
-                        """,
-                    inputSchema: .object([
-                        "type": .string("object"),
-                        "properties": .object([
-                            "topPercentage": .object([
-                                "type": .string("number"),
-                                "description": .string("Include top activities by usage time - 0.8 means top 80% most used (default: 0.8)"),
-                            ]),
-                            "dateString": .object([
-                                "type": .string("string"),
-                                "description": .string("Specific date to analyze in YYYY-MM-DD format, or omit for today"),
-                            ]),
-                            "typeFilter": .object([
-                                "type": .string("string"),
-                                "description": .string("Data type: 'app' for applications or 'website' for web browsing (default: 'app')"),
-                            ]),
-                        ]),
-                    ])
-                )
-            ]
-            return .init(tools: tools)
+            return .init(tools: Self.tools)
         }
 
         // Register tool call handler
@@ -153,46 +85,137 @@ actor MCPServer {
         }
     }
 
+    private static var tools: [Tool] {
+        [
+            Tool(
+                name: "get_usage_activity",
+                description: "Legacy compact daily usage summary. Returns pipe-separated name:duration rows for app or website usage.",
+                inputSchema: usageActivitySchema
+            ),
+            Tool(
+                name: "get_usage_range",
+                description: "Return JSON summary of tracked usage across a time range. Supports app/website/all filters and grouping by name, identifier, type, or session.",
+                inputSchema: usageRangeSchema
+            ),
+            Tool(
+                name: "get_raw_sessions",
+                description: "Return raw tracked sessions as JSON rows clipped to the requested time range. Use this when exact start/end times matter.",
+                inputSchema: rawSessionsSchema
+            ),
+            Tool(
+                name: "get_current_activity",
+                description: "Return active in-progress sessions as JSON. Useful for asking what the user appears to be doing right now.",
+                inputSchema: .object(["type": .string("object"), "properties": .object([:])])
+            ),
+            Tool(
+                name: "get_hourly_timeline",
+                description: "Return JSON with 24 hourly buckets for a date, splitting sessions across hour boundaries.",
+                inputSchema: timelineSchema
+            ),
+            Tool(
+                name: "get_daily_summary",
+                description: "Return JSON daily summary of top activities for a date, grouped by activity name.",
+                inputSchema: dailySummarySchema
+            ),
+        ]
+    }
+
+    private static var usageActivitySchema: Value {
+        objectSchema(properties: [
+            "topPercentage": property(type: "number", description: "Include top activities by usage time - 0.8 means top 80% most used (default: 0.8)"),
+            "dateString": property(type: "string", description: "Specific date to analyze in YYYY-MM-DD format, or omit for today"),
+            "typeFilter": property(type: "string", description: "Data type: 'app' or 'website' (default: 'app')"),
+        ])
+    }
+
+    private static var usageRangeSchema: Value {
+        objectSchema(properties: rangeProperties(extra: ["groupBy": property(type: "string", description: "Grouping: 'name', 'identifier', 'type', or 'session' (default: 'name')")]))
+    }
+
+    private static var rawSessionsSchema: Value {
+        objectSchema(properties: rangeProperties(extra: [:]))
+    }
+
+    private static var timelineSchema: Value {
+        objectSchema(properties: [
+            "dateString": property(type: "string", description: "Date in YYYY-MM-DD format, or omit for today"),
+            "typeFilter": property(type: "string", description: "Data type: 'app', 'website', or 'all' (default: 'all')"),
+        ])
+    }
+
+    private static var dailySummarySchema: Value {
+        objectSchema(properties: [
+            "dateString": property(type: "string", description: "Date in YYYY-MM-DD format, or omit for today"),
+            "typeFilter": property(type: "string", description: "Data type: 'app', 'website', or 'all' (default: 'all')"),
+            "limit": property(type: "number", description: "Maximum number of activities to return (default: 20)"),
+        ])
+    }
+
+    private static func rangeProperties(extra: [String: Value]) -> [String: Value] {
+        var properties = [
+            "startTime": property(type: "string", description: "Range start as ISO-8601 date/time or YYYY-MM-DD. Defaults to 24 hours before endTime."),
+            "endTime": property(type: "string", description: "Range end as ISO-8601 date/time or YYYY-MM-DD. Defaults to now."),
+            "typeFilter": property(type: "string", description: "Data type: 'app', 'website', or 'all' (default: 'all')"),
+            "includeActive": property(type: "boolean", description: "Whether to include active in-progress sessions (default: true)"),
+        ]
+        properties.merge(extra) { _, new in new }
+        return properties
+    }
+
+    private static func objectSchema(properties: [String: Value]) -> Value {
+        .object(["type": .string("object"), "properties": .object(properties)])
+    }
+
+    private static func property(type: String, description: String) -> Value {
+        .object(["type": .string(type), "description": .string(description)])
+    }
+
     /// Handler for tool calls
     private func handleCallTool(params: CallTool.Parameters) async -> CallTool.Result {
-        switch params.name {
-        case "get_usage_activity":
-            // Extract parameters exactly like IPC service
-            let topPercentage = params.arguments?["topPercentage"]?.doubleValue ?? 0.8
-            let dateString = params.arguments?["dateString"]?.stringValue
-            let typeFilter = params.arguments?["typeFilter"]?.stringValue ?? "app"
-
-            do {
-                // Use same logic as IPC service
-                let usage = try await ipcClient.getUsageActivity(
-                    topPercentage: topPercentage,
-                    dateString: dateString,
-                    typeFilter: typeFilter
+        do {
+            let output: String?
+            switch params.name {
+            case "get_usage_activity":
+                output = try await ipcClient.getUsageActivity(
+                    topPercentage: params.arguments?["topPercentage"]?.doubleValue ?? 0.8,
+                    dateString: params.arguments?["dateString"]?.stringValue,
+                    typeFilter: params.arguments?["typeFilter"]?.stringValue ?? "app"
                 )
-
-                if let usage = usage, !usage.isEmpty {
-                    return .init(
-                        content: [.text(usage)],
-                        isError: false
-                    )
-                } else {
-                    return .init(
-                        content: [.text("No usage data found")],
-                        isError: false
-                    )
-                }
-            } catch {
-                return .init(
-                    content: [.text("Error fetching usage activity: \(error.localizedDescription)")],
-                    isError: true
+            case "get_usage_range":
+                output = try await ipcClient.getUsageRange(
+                    startTime: params.arguments?["startTime"]?.stringValue,
+                    endTime: params.arguments?["endTime"]?.stringValue,
+                    typeFilter: params.arguments?["typeFilter"]?.stringValue,
+                    groupBy: params.arguments?["groupBy"]?.stringValue,
+                    includeActive: params.arguments?["includeActive"]?.boolValue
                 )
+            case "get_raw_sessions":
+                output = try await ipcClient.getRawSessions(
+                    startTime: params.arguments?["startTime"]?.stringValue,
+                    endTime: params.arguments?["endTime"]?.stringValue,
+                    typeFilter: params.arguments?["typeFilter"]?.stringValue,
+                    includeActive: params.arguments?["includeActive"]?.boolValue
+                )
+            case "get_current_activity":
+                output = try await ipcClient.getCurrentActivity()
+            case "get_hourly_timeline":
+                output = try await ipcClient.getHourlyTimeline(
+                    dateString: params.arguments?["dateString"]?.stringValue,
+                    typeFilter: params.arguments?["typeFilter"]?.stringValue
+                )
+            case "get_daily_summary":
+                output = try await ipcClient.getDailySummary(
+                    dateString: params.arguments?["dateString"]?.stringValue,
+                    typeFilter: params.arguments?["typeFilter"]?.stringValue,
+                    limit: params.arguments?["limit"]?.doubleValue.map(Int.init)
+                )
+            default:
+                return .init(content: [.text("Unknown tool: \(params.name)")], isError: true)
             }
 
-        default:
-            return .init(
-                content: [.text("Unknown tool: \(params.name)")],
-                isError: true
-            )
+            return .init(content: [.text(output ?? "No usage data found")], isError: false)
+        } catch {
+            return .init(content: [.text("Error running \(params.name): \(error.localizedDescription)")], isError: true)
         }
     }
 }

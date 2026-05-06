@@ -16,6 +16,11 @@ import os
 enum MessageType: UInt8 {
     case getVersion = 0x01
     case getUsageActivity = 0x02
+    case getUsageRange = 0x03
+    case getRawSessions = 0x04
+    case getCurrentActivity = 0x05
+    case getHourlyTimeline = 0x06
+    case getDailySummary = 0x07
     case response = 0x80
     case error = 0x81
 }
@@ -92,6 +97,136 @@ class IPCService: NSObject, @unchecked Sendable {
             logger.error("Failed to fetch usage activity: \(error.localizedDescription)")
             completion(nil, error)
         }
+    }
+
+    func getUsageRange(request: UsageRangeRequest, completion: @escaping (String?, Error?) -> Void) {
+        do {
+            let context = ModelContext(modelContainer)
+            let end = try parseDateTime(request.endTime) ?? Date()
+            let start = try parseDateTime(request.startTime) ?? Calendar.current.date(byAdding: .day, value: -1, to: end)!
+            let summary = try UsageAggregator.usageRange(
+                start: start,
+                end: end,
+                typeFilter: request.typeFilter ?? "all",
+                groupBy: request.groupBy ?? "name",
+                includeActive: request.includeActive ?? true,
+                modelContext: context
+            )
+            completion(try encodeJSON(summary), nil)
+        } catch {
+            logger.error("Failed to fetch usage range: \(error.localizedDescription)")
+            completion(nil, error)
+        }
+    }
+
+    func getRawSessions(request: UsageRangeRequest, completion: @escaping (String?, Error?) -> Void) {
+        do {
+            let context = ModelContext(modelContainer)
+            let end = try parseDateTime(request.endTime) ?? Date()
+            let start = try parseDateTime(request.startTime) ?? Calendar.current.date(byAdding: .day, value: -1, to: end)!
+            let sessions = try UsageAggregator.rawSessions(
+                start: start,
+                end: end,
+                typeFilter: request.typeFilter ?? "all",
+                includeActive: request.includeActive ?? true,
+                modelContext: context
+            )
+            completion(try encodeJSON(sessions), nil)
+        } catch {
+            logger.error("Failed to fetch raw sessions: \(error.localizedDescription)")
+            completion(nil, error)
+        }
+    }
+
+    func getCurrentActivity(completion: @escaping (String?, Error?) -> Void) {
+        let now = Date()
+        let request = UsageRangeRequest(startTime: ISO8601DateFormatter().string(from: Calendar.current.date(byAdding: .hour, value: -12, to: now)!), endTime: nil, typeFilter: "all", groupBy: "name", includeActive: true)
+        getRawSessions(request: request) { result, error in
+            if let error {
+                completion(nil, error)
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .iso8601
+                let sessions = try decoder.decode([UsageSessionSnapshot].self, from: (result ?? "[]").data(using: .utf8) ?? Data())
+                let activeSessions = sessions.filter { $0.isActive }
+                completion(try self.encodeJSON(activeSessions), nil)
+            } catch {
+                completion(nil, error)
+            }
+        }
+    }
+
+    func getHourlyTimeline(request: UsageTimelineRequest, completion: @escaping (String?, Error?) -> Void) {
+        do {
+            let context = ModelContext(modelContainer)
+            let date = try parseDateOnly(request.dateString) ?? Date()
+            let timeline = try UsageAggregator.hourlyTimeline(
+                for: date,
+                typeFilter: request.typeFilter ?? "all",
+                modelContext: context
+            )
+            completion(try encodeJSON(timeline), nil)
+        } catch {
+            logger.error("Failed to fetch hourly timeline: \(error.localizedDescription)")
+            completion(nil, error)
+        }
+    }
+
+    func getDailySummary(request: UsageDailySummaryRequest, completion: @escaping (String?, Error?) -> Void) {
+        do {
+            let context = ModelContext(modelContainer)
+            let date = try parseDateOnly(request.dateString) ?? Date()
+            let calendar = Calendar.current
+            let start = calendar.startOfDay(for: date)
+            let end = calendar.date(byAdding: .day, value: 1, to: start)!
+            let summary = try UsageAggregator.usageRange(
+                start: start,
+                end: end,
+                typeFilter: request.typeFilter ?? "all",
+                groupBy: "name",
+                includeActive: true,
+                modelContext: context
+            )
+            let limit = request.limit ?? 20
+            let limitedSummary = UsageRangeSummary(
+                startTime: summary.startTime,
+                endTime: summary.endTime,
+                totalDurationSeconds: summary.totalDurationSeconds,
+                sessionCount: summary.sessionCount,
+                items: Array(summary.items.prefix(limit))
+            )
+            completion(try encodeJSON(limitedSummary), nil)
+        } catch {
+            logger.error("Failed to fetch daily summary: \(error.localizedDescription)")
+            completion(nil, error)
+        }
+    }
+
+    private func encodeJSON<T: Encodable>(_ value: T) throws -> String {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(value)
+        return String(data: data, encoding: .utf8) ?? "{}"
+    }
+
+    private func parseDateOnly(_ value: String?) throws -> Date? {
+        guard let value, !value.isEmpty else { return nil }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = .current
+        return formatter.date(from: value)
+    }
+
+    private func parseDateTime(_ value: String?) throws -> Date? {
+        guard let value, !value.isEmpty else { return nil }
+        if let date = ISO8601DateFormatter().date(from: value) {
+            return date
+        }
+        return try parseDateOnly(value)
     }
 
     /// Retrieves the current version of the SimplyTrack application
@@ -268,6 +403,16 @@ private final class IPCChannelHandler: ChannelInboundHandler {
             switch message.type {
             case .getUsageActivity:
                 response = await handleGetUsageActivity(body: message.body)
+            case .getUsageRange:
+                response = await handleUsageJSONRequest(body: message.body, decodeAs: UsageRangeRequest.self, serviceMethod: service.getUsageRange)
+            case .getRawSessions:
+                response = await handleUsageJSONRequest(body: message.body, decodeAs: UsageRangeRequest.self, serviceMethod: service.getRawSessions)
+            case .getCurrentActivity:
+                response = await handleGetCurrentActivity()
+            case .getHourlyTimeline:
+                response = await handleUsageJSONRequest(body: message.body, decodeAs: UsageTimelineRequest.self, serviceMethod: service.getHourlyTimeline)
+            case .getDailySummary:
+                response = await handleUsageJSONRequest(body: message.body, decodeAs: UsageDailySummaryRequest.self, serviceMethod: service.getDailySummary)
             case .getVersion:
                 response = await handleGetVersion()
             default:
@@ -358,6 +503,39 @@ private final class IPCChannelHandler: ChannelInboundHandler {
             response = IPCMessage(type: .response, body: version.data(using: .utf8) ?? Data())
         }
         return response ?? IPCMessage(type: .error, body: "Failed to get version".data(using: .utf8) ?? Data())
+    }
+
+    private func handleUsageJSONRequest<Request: Decodable>(
+        body: Data,
+        decodeAs _: Request.Type,
+        serviceMethod: @escaping (Request, @escaping (String?, Error?) -> Void) -> Void
+    ) async -> IPCMessage {
+        do {
+            let request = try JSONDecoder().decode(Request.self, from: body.isEmpty ? Data("{}".utf8) : body)
+            return await withCheckedContinuation { continuation in
+                serviceMethod(request) { result, error in
+                    if let error {
+                        continuation.resume(returning: IPCMessage(type: .error, body: error.localizedDescription.data(using: .utf8) ?? Data()))
+                    } else {
+                        continuation.resume(returning: IPCMessage(type: .response, body: (result ?? "{}").data(using: .utf8) ?? Data()))
+                    }
+                }
+            }
+        } catch {
+            return IPCMessage(type: .error, body: "Invalid JSON request: \(error.localizedDescription)".data(using: .utf8) ?? Data())
+        }
+    }
+
+    private func handleGetCurrentActivity() async -> IPCMessage {
+        return await withCheckedContinuation { continuation in
+            service.getCurrentActivity { result, error in
+                if let error {
+                    continuation.resume(returning: IPCMessage(type: .error, body: error.localizedDescription.data(using: .utf8) ?? Data()))
+                } else {
+                    continuation.resume(returning: IPCMessage(type: .response, body: (result ?? "[]").data(using: .utf8) ?? Data()))
+                }
+            }
+        }
     }
 }
 
