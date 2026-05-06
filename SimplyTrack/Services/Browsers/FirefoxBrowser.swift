@@ -33,14 +33,59 @@ class FirefoxBrowser: BaseBrowser {
     override func getCurrentURL() -> String? {
         let script = """
                 tell application "System Events" to tell process "Firefox"
-                    get value of combo box 1 of group 1 of toolbar 2 of group 1 of window 1
+                    if not (exists window 1) then
+                        error "Firefox accessibility tree not available" number -2700
+                    end if
+
+                    set frontWindow to window 1
+                    if (count of UI elements of frontWindow) is 0 then
+                        error "Firefox accessibility tree not available" number -2700
+                    end if
+
+                    try
+                        set addressValue to value of combo box 1 of group 1 of toolbar 2 of group 1 of frontWindow
+                        if addressValue is not missing value and addressValue is not "" then return addressValue as text
+                    end try
+
+                    try
+                        set addressValue to value of combo box 1 of group 1 of toolbar 1 of group 1 of frontWindow
+                        if addressValue is not missing value and addressValue is not "" then return addressValue as text
+                    end try
+
+                    try
+                        set addressValue to value of combo box 1 of toolbar 1 of frontWindow
+                        if addressValue is not missing value and addressValue is not "" then return addressValue as text
+                    end try
+
+                    try
+                        set addressValue to value of combo box 1 of toolbar 2 of frontWindow
+                        if addressValue is not missing value and addressValue is not "" then return addressValue as text
+                    end try
+
+                    repeat with currentToolbar in toolbars of frontWindow
+                        try
+                            set addressValue to value of combo box 1 of currentToolbar
+                            if addressValue is not missing value and addressValue is not "" then return addressValue as text
+                        end try
+
+                        repeat with currentGroup in groups of currentToolbar
+                            try
+                                set addressValue to value of combo box 1 of currentGroup
+                                if addressValue is not missing value and addressValue is not "" then return addressValue as text
+                            end try
+                        end repeat
+                    end repeat
+
+                    return ""
                 end tell
             """
 
         let scriptResult = executeAppleScript(script)
 
         if let error = scriptResult.error {
-            if scriptResult.errorCode == -1719 || scriptResult.errorCode == -1728 {
+            let errorMessage = error["NSAppleScriptErrorMessage"] as? String ?? error.description
+
+            if errorMessage.contains("Firefox accessibility tree not available") {
                 // Accessibility tree not available - Firefox requires about:config change
                 logger.warning("Firefox accessibility tree not available. User needs to set accessibility.force_disabled to -1 in about:config.")
                 PermissionManager.shared.handleBrowserError(
@@ -48,6 +93,9 @@ class FirefoxBrowser: BaseBrowser {
                 )
             } else if scriptResult.errorCode == -1743 || scriptResult.errorCode == -1744 {
                 PermissionManager.shared.handleSystemEventsPermissionResult(success: false)
+            } else if scriptResult.errorCode == -1719 || scriptResult.errorCode == -1728 {
+                // Firefox's accessibility hierarchy can shift during navigation or between versions.
+                logger.debug("Firefox address bar unavailable in current accessibility tree: \(error.description)")
             } else {
                 logger.error("Firefox Accessibility AppleScript error: \(error.description)")
                 PermissionManager.shared.handleBrowserError("Firefox communication error: \(error.description)")
