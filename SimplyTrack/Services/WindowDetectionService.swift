@@ -117,7 +117,7 @@ class WindowDetectionService {
                 Self.ignoredBundleIds.contains(bundleIdentifier)
             {
                 logger.log(
-                    "floating_window_detection decision=skip_system_ui bundle=\(bundleIdentifier) owner=\(window.ownerName ?? "unknown") level=\(window.level) width=\(window.width) height=\(window.height)"
+                    "floating_window_detection decision=skip_system_ui bundle=\(bundleIdentifier, privacy: .public) owner=\(window.ownerName ?? "unknown", privacy: .public) level=\(window.level, privacy: .public) width=\(window.width, privacy: .public) height=\(window.height, privacy: .public)"
                 )
                 continue
             }
@@ -147,7 +147,7 @@ class WindowDetectionService {
                 let name = app.localizedName ?? window.ownerName ?? "Unknown"
 
                 logger.log(
-                    "floating_window_detection decision=accept_overlay bundle=\(window.bundleIdentifier ?? "unknown") owner=\(window.ownerName ?? "unknown") level=\(window.level) width=\(window.width) height=\(window.height)"
+                    "floating_window_detection decision=accept_overlay bundle=\(window.bundleIdentifier ?? "unknown", privacy: .public) owner=\(window.ownerName ?? "unknown", privacy: .public) level=\(window.level, privacy: .public) width=\(window.width, privacy: .public) height=\(window.height, privacy: .public)"
                 )
 
                 return DetectedWindow(
