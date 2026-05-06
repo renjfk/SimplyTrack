@@ -39,7 +39,7 @@ insights without the bloat.
 
 ## ✨ Features
 
-- **📊 App & Website Tracking** - Monitor time spent in applications and websites (Safari, Chrome, Edge, Arc, Brave, Vivaldi, Firefox supported)
+- **📊 App & Website Tracking** - Monitor time spent in applications and websites (Safari, Chrome, Edge, Arc, Brave, Vivaldi, Firefox experimental)
 - **📈 Visual Analytics** - Charts showing daily/weekly activity patterns
 - **🔔 Smart Notifications** - Optional AI-powered daily summary notifications with usage insights
 - **🤖 AI Integration** - Built-in MCP server for seamless integration with Claude and other AI assistants
@@ -95,7 +95,8 @@ SimplyTrack requires several macOS permissions to function properly:
 
 4. **Firefox Additional Setup**: Firefox does not expose tab URLs through its scripting interface, so
    SimplyTrack reads the address bar via the macOS Accessibility API. This requires a one-time Firefox
-   configuration change:
+   configuration change. Firefox website tracking is experimental and may stop working if Firefox changes
+   its accessibility hierarchy, if the toolbar is customized, or while the browser UI is in a transient state:
     1. Open Firefox and navigate to `about:config`
     2. Accept the risk warning if prompted
     3. Search for `accessibility.force_disabled`

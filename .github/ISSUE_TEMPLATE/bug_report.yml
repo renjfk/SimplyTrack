@@ -62,7 +62,7 @@ body:
         - Arc
         - Brave
         - Vivaldi
-        - Firefox
+        - Firefox (experimental)
 
     validations:
       required: false
