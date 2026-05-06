@@ -3,7 +3,7 @@
 //  SimplyTrack
 //
 //  Handles browser integration, AppleScript execution, favicon fetching, and website detection
-//  Supports Safari, Chrome, Edge, Arc, Brave, Vivaldi, and Firefox through AppleScript communication for website tracking
+//  Supports Safari, Chrome, Edge, Arc, Brave, Vivaldi, Firefox, and ChatGPT Atlas through AppleScript communication for website tracking
 //
 
 import AppKit
@@ -64,6 +64,7 @@ class WebTrackingService {
         BraveBrowser(),
         VivaldiBrowser(),
         FirefoxBrowser(),
+        AtlasBrowser(),
     ].reduce(into: [:]) { result, browser in
         result[browser.bundleId] = browser
     }

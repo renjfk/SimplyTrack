@@ -83,7 +83,7 @@ SimplyTrack requires several macOS permissions to function properly:
 
 1. **Automation Permission**: To track browser activity
     - System Preferences → Privacy & Security → Automation
-    - Enable SimplyTrack for your browsers (Safari, Chrome, Edge, Arc, Brave, Vivaldi, Firefox)
+    - Enable SimplyTrack for your browsers (Safari, Chrome, Edge, Arc, Brave, Vivaldi, Firefox, ChatGPT Atlas)
 
 2. **System Events Permission**: For Safari and Firefox browser integration
     - System Preferences → Privacy & Security → Automation
