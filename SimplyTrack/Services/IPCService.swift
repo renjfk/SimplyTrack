@@ -140,7 +140,15 @@ class IPCService: NSObject, @unchecked Sendable {
 
     func getCurrentActivity(completion: @escaping (String?, Error?) -> Void) {
         let now = Date()
-        let request = UsageRangeRequest(startTime: ISO8601DateFormatter().string(from: Calendar.current.date(byAdding: .hour, value: -12, to: now)!), endTime: nil, typeFilter: "all", groupBy: "name", includeActive: true)
+        let twelveHoursAgo = Calendar.current.date(byAdding: .hour, value: -12, to: now)!
+        let startTime = ISO8601DateFormatter().string(from: twelveHoursAgo)
+        let request = UsageRangeRequest(
+            startTime: startTime,
+            endTime: nil,
+            typeFilter: "all",
+            groupBy: "name",
+            includeActive: true
+        )
         getRawSessions(request: request) { result, error in
             if let error {
                 completion(nil, error)

@@ -137,12 +137,37 @@ actor IPCClient {
         return try await sendMessage(type: .getUsageActivity, body: body)
     }
 
-    func getUsageRange(startTime: String?, endTime: String?, typeFilter: String?, groupBy: String?, includeActive: Bool?) async throws -> String? {
-        return try await sendJSONMessage(type: .getUsageRange, request: UsageRangeRequest(startTime: startTime, endTime: endTime, typeFilter: typeFilter, groupBy: groupBy, includeActive: includeActive))
+    func getUsageRange(
+        startTime: String?,
+        endTime: String?,
+        typeFilter: String?,
+        groupBy: String?,
+        includeActive: Bool?
+    ) async throws -> String? {
+        let request = UsageRangeRequest(
+            startTime: startTime,
+            endTime: endTime,
+            typeFilter: typeFilter,
+            groupBy: groupBy,
+            includeActive: includeActive
+        )
+        return try await sendJSONMessage(type: .getUsageRange, request: request)
     }
 
-    func getRawSessions(startTime: String?, endTime: String?, typeFilter: String?, includeActive: Bool?) async throws -> String? {
-        return try await sendJSONMessage(type: .getRawSessions, request: UsageRangeRequest(startTime: startTime, endTime: endTime, typeFilter: typeFilter, groupBy: nil, includeActive: includeActive))
+    func getRawSessions(
+        startTime: String?,
+        endTime: String?,
+        typeFilter: String?,
+        includeActive: Bool?
+    ) async throws -> String? {
+        let request = UsageRangeRequest(
+            startTime: startTime,
+            endTime: endTime,
+            typeFilter: typeFilter,
+            groupBy: nil,
+            includeActive: includeActive
+        )
+        return try await sendJSONMessage(type: .getRawSessions, request: request)
     }
 
     func getCurrentActivity() async throws -> String? {
