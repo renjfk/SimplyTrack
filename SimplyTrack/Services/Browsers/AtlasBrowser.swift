@@ -9,15 +9,18 @@ import Foundation
 /// Handles URL detection and incognito mode detection for ChatGPT Atlas.
 /// Atlas is Chromium-based and shares the same AppleScript interface as Chrome.
 class AtlasBrowser: BaseBrowser {
+    static let appBundleId = "com.openai.atlas"
+    static let webBundleId = "com.openai.atlas.web"
+    static let supportedBundleIds = [appBundleId, webBundleId]
 
     init() {
-        super.init(bundleId: "com.openai.atlas", displayName: "ChatGPT Atlas")
+        super.init(bundleId: Self.appBundleId, displayName: "ChatGPT Atlas")
     }
 
     /// ChatGPT Atlas-specific AppleScript for URL retrieval
     override var currentURLScript: String {
         return """
-                tell application "ChatGPT Atlas"
+                tell application id "\(Self.webBundleId)"
                     if (count of windows) > 0 then
                         set currentTab to active tab of window 1
                         return URL of currentTab
@@ -32,7 +35,7 @@ class AtlasBrowser: BaseBrowser {
     /// - Returns: true if incognito mode is detected, false otherwise
     override func isInPrivateBrowsingMode() -> Bool {
         let script = """
-                tell application "ChatGPT Atlas"
+                tell application id "\(Self.webBundleId)"
                     if (count of windows) > 0 then
                         return mode of window 1 is equal to "incognito"
                     end if

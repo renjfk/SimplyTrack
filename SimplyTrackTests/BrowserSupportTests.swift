@@ -6,6 +6,7 @@
 //
 
 import Testing
+
 @testable import SimplyTrack
 
 struct BrowserSupportTests {
@@ -17,5 +18,15 @@ struct BrowserSupportTests {
 
         #expect(browser != nil)
         #expect(browser?.bundleId == "com.openai.atlas")
+    }
+
+    @Test func chatGPTAtlasWebProcessIsRecognizedAsSupportedBrowser() {
+        let service = WebTrackingService()
+
+        let browser = service.getBrowser(for: "com.openai.atlas.web")
+
+        #expect(browser != nil)
+        #expect(browser?.bundleId == "com.openai.atlas")
+        #expect(browser?.displayName == "ChatGPT Atlas")
     }
 }

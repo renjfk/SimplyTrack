@@ -45,6 +45,7 @@ class PermissionManager: ObservableObject {
         "com.vivaldi.Vivaldi",
         "org.mozilla.firefox",
         "com.openai.atlas",
+        "com.openai.atlas.web",
     ]
 
     private init() {
