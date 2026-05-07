@@ -66,6 +66,7 @@ Notes:
 - `-skip-testing:SimplyTrackUITests` is required because UI tests need a signed app bundle to launch
 
 Verify changes: build + test with zero failures. Always run `swift-format --in-place` on files you modify.
+When editing GitHub Actions workflows, run `actionlint` before finishing.
 
 ## Code Style
 

@@ -26,6 +26,7 @@ jobs:
       pr_number: ${{ steps.resolve.outputs.pr_number }}
       head_sha: ${{ steps.resolve.outputs.head_sha }}
       head_ref: ${{ steps.resolve.outputs.head_ref }}
+      checkout_ref: ${{ steps.resolve.outputs.checkout_ref }}
       release_tag: ${{ steps.resolve.outputs.tag }}
       version: ${{ steps.resolve.outputs.version }}
       dmg_title: ${{ steps.resolve.outputs.dmg_title }}
@@ -42,9 +43,11 @@ jobs:
             PR_JSON=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json headRefOid,headRefName)
             HEAD_SHA=$(echo "$PR_JSON" | jq -r '.headRefOid')
             HEAD_REF=$(echo "$PR_JSON" | jq -r '.headRefName')
+            CHECKOUT_REF="refs/pull/$PR_NUMBER/head"
           else
             HEAD_SHA="$GITHUB_SHA"
             HEAD_REF="$GITHUB_REF_NAME"
+            CHECKOUT_REF="$GITHUB_SHA"
           fi
 
           LATEST_TAG=$(gh release list --repo "$GITHUB_REPOSITORY" \
@@ -56,7 +59,7 @@ jobs:
           if [ -n "$PR_NUMBER" ]; then
             TAG="v${BASE}-pr${PR_NUMBER}.${SHORT_SHA}"
           else
-            SAFE_REF=$(echo "$HEAD_REF" | sed 's/[^a-zA-Z0-9._-]/-/g')
+            SAFE_REF="${HEAD_REF//[^a-zA-Z0-9._-]/-}"
             TAG="v${BASE}-${SAFE_REF}.${SHORT_SHA}"
           fi
 
@@ -70,12 +73,15 @@ jobs:
             DMG_TITLE="SimplyTrack ${SAFE_REF:0:15}"
           fi
 
-          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
-          echo "head_sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
-          echo "head_ref=$HEAD_REF" >> "$GITHUB_OUTPUT"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
-          echo "dmg_title=$DMG_TITLE" >> "$GITHUB_OUTPUT"
+          {
+            echo "pr_number=$PR_NUMBER"
+            echo "head_sha=$HEAD_SHA"
+            echo "head_ref=$HEAD_REF"
+            echo "checkout_ref=$CHECKOUT_REF"
+            echo "tag=$TAG"
+            echo "version=${TAG#v}"
+            echo "dmg_title=$DMG_TITLE"
+          } >> "$GITHUB_OUTPUT"
           echo "Prerelease: $TAG ($HEAD_REF @ $SHORT_SHA)"
 
   prerelease:
@@ -87,7 +93,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.resolve.outputs.head_sha }}
+          ref: ${{ needs.resolve.outputs.checkout_ref }}
           fetch-depth: 0
 
       - name: Create release tag
@@ -131,11 +137,20 @@ jobs:
         id: get_cert
         run: |
           CERT_LINE=$(security find-identity -v -p codesigning build.keychain | grep "Developer ID Application" | head -n 1)
-          CERT_IDENTITY=$(echo "$CERT_LINE" | sed 's/.*"\(.*\)".*/\1/')
-          TEAM_ID=$(echo "$CERT_IDENTITY" | sed 's/.*(\([A-Z0-9]*\)).*/\1/')
+          CERT_IDENTITY="$CERT_LINE"
+          if [[ "$CERT_LINE" =~ \"(.*)\" ]]; then
+            CERT_IDENTITY="${BASH_REMATCH[1]}"
+          fi
 
-          echo "cert-identity=$CERT_IDENTITY" >> $GITHUB_OUTPUT
-          echo "team-id=$TEAM_ID" >> $GITHUB_OUTPUT
+          TEAM_ID=""
+          if [[ "$CERT_IDENTITY" =~ \(([A-Z0-9]+)\) ]]; then
+            TEAM_ID="${BASH_REMATCH[1]}"
+          fi
+
+          {
+            echo "cert-identity=$CERT_IDENTITY"
+            echo "team-id=$TEAM_ID"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build and Archive
         timeout-minutes: 10
@@ -167,7 +182,7 @@ jobs:
             echo "No .app bundle found in build directory"
             exit 1
           fi
-          echo "app-path=$APP_PATH" >> $GITHUB_OUTPUT
+          echo "app-path=$APP_PATH" >> "$GITHUB_OUTPUT"
 
       - name: Setup notarization credentials
         env:
@@ -175,26 +190,28 @@ jobs:
           MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
           MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
         run: |
-          mkdir -p ~/private_keys
+          PRIVATE_KEYS_DIR="$HOME/private_keys"
+          KEY_PATH="$PRIVATE_KEYS_DIR/AuthKey_$MACOS_NOTARY_KEY_ID.p8"
+          mkdir -p "$PRIVATE_KEYS_DIR"
 
           if echo "$MACOS_NOTARY_KEY" | base64 -d > /tmp/test_key 2>/dev/null; then
-            echo "$MACOS_NOTARY_KEY" | base64 -d > ~/private_keys/AuthKey_$MACOS_NOTARY_KEY_ID.p8
+            echo "$MACOS_NOTARY_KEY" | base64 -d > "$KEY_PATH"
           else
-            echo "$MACOS_NOTARY_KEY" > ~/private_keys/AuthKey_$MACOS_NOTARY_KEY_ID.p8
+            echo "$MACOS_NOTARY_KEY" > "$KEY_PATH"
           fi
 
-          chmod 600 ~/private_keys/AuthKey_$MACOS_NOTARY_KEY_ID.p8
+          chmod 600 "$KEY_PATH"
 
-          openssl pkey -in ~/private_keys/AuthKey_$MACOS_NOTARY_KEY_ID.p8 -text -noout || {
-            echo "$MACOS_NOTARY_KEY" | tr -d '\r' | sed 's/\\n/\n/g' > ~/private_keys/AuthKey_$MACOS_NOTARY_KEY_ID.p8
-            chmod 600 ~/private_keys/AuthKey_$MACOS_NOTARY_KEY_ID.p8
+          openssl pkey -in "$KEY_PATH" -text -noout || {
+            echo "$MACOS_NOTARY_KEY" | tr -d '\r' | sed 's/\\n/\n/g' > "$KEY_PATH"
+            chmod 600 "$KEY_PATH"
           }
 
           PROFILE_NAME="notary-profile-$GITHUB_RUN_ID"
-          echo "NOTARY_PROFILE=$PROFILE_NAME" >> $GITHUB_ENV
+          echo "NOTARY_PROFILE=$PROFILE_NAME" >> "$GITHUB_ENV"
 
           xcrun notarytool store-credentials "$PROFILE_NAME" \
-            --key "~/private_keys/AuthKey_$MACOS_NOTARY_KEY_ID.p8" \
+            --key "$KEY_PATH" \
             --key-id "$MACOS_NOTARY_KEY_ID" \
             --issuer "$MACOS_NOTARY_ISSUER_ID"
 

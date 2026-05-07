@@ -64,8 +64,8 @@ jobs:
         id: version
         run: |
           RELEASE_TAG="${{ github.event.inputs.release_tag }}"
-          VERSION=${RELEASE_TAG#v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          VERSION="${RELEASE_TAG#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Setting version to: $VERSION"
 
       - name: Save release notes
@@ -77,9 +77,11 @@ jobs:
           EOF
           
           # Set output for next jobs
-          echo "release_notes<<NOTES_EOF" >> $GITHUB_OUTPUT
-          cat release_notes.md >> $GITHUB_OUTPUT
-          echo "NOTES_EOF" >> $GITHUB_OUTPUT
+          {
+            echo "release_notes<<NOTES_EOF"
+            cat release_notes.md
+            echo "NOTES_EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Upload release notes artifact
         uses: actions/upload-artifact@v4
@@ -147,11 +149,20 @@ jobs:
         run: |
           # Extract certificate name and team ID from custom keychain (do once)
           CERT_LINE=$(security find-identity -v -p codesigning build.keychain | grep "Developer ID Application" | head -n 1)
-          CERT_IDENTITY=$(echo "$CERT_LINE" | sed 's/.*"\(.*\)".*/\1/')
-          TEAM_ID=$(echo "$CERT_IDENTITY" | sed 's/.*(\([A-Z0-9]*\)).*/\1/')
-          
-          echo "cert-identity=$CERT_IDENTITY" >> $GITHUB_OUTPUT
-          echo "team-id=$TEAM_ID" >> $GITHUB_OUTPUT
+          CERT_IDENTITY="$CERT_LINE"
+          if [[ "$CERT_LINE" =~ \"(.*)\" ]]; then
+            CERT_IDENTITY="${BASH_REMATCH[1]}"
+          fi
+
+          TEAM_ID=""
+          if [[ "$CERT_IDENTITY" =~ \(([A-Z0-9]+)\) ]]; then
+            TEAM_ID="${BASH_REMATCH[1]}"
+          fi
+
+          {
+            echo "cert-identity=$CERT_IDENTITY"
+            echo "team-id=$TEAM_ID"
+          } >> "$GITHUB_OUTPUT"
           echo "Using certificate: $CERT_IDENTITY"
           echo "Using team ID: $TEAM_ID"
 
@@ -187,7 +198,7 @@ jobs:
             echo "No .app bundle found in build directory"
             exit 1
           fi
-          echo "app-path=$APP_PATH" >> $GITHUB_OUTPUT
+          echo "app-path=$APP_PATH" >> "$GITHUB_OUTPUT"
           echo "Located app bundle: $APP_PATH"
 
       - name: Upload signed app
@@ -219,7 +230,7 @@ jobs:
       - name: Fix executable permissions after download
         run: |
           # Find and fix executable permissions for all app bundles
-          find build -name "*.app" -type d | while read APP_PATH; do
+          find build -name "*.app" -type d | while read -r APP_PATH; do
             if [ -d "$APP_PATH/Contents/MacOS" ]; then
               echo "Fixing permissions for: $APP_PATH"
               find "$APP_PATH/Contents/MacOS" -type f -exec chmod +x {} \;
@@ -254,36 +265,38 @@ jobs:
           MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
         run: |
           # Create AuthKey file for notarization
-          mkdir -p ~/private_keys
-          
+          PRIVATE_KEYS_DIR="$HOME/private_keys"
+          KEY_PATH="$PRIVATE_KEYS_DIR/AuthKey_$MACOS_NOTARY_KEY_ID.p8"
+          mkdir -p "$PRIVATE_KEYS_DIR"
+
           # Decode base64 key (if it's base64 encoded) or write directly
           if echo "$MACOS_NOTARY_KEY" | base64 -d > /tmp/test_key 2>/dev/null; then
             echo "Key is base64 encoded, decoding..."
-            echo "$MACOS_NOTARY_KEY" | base64 -d > ~/private_keys/AuthKey_$MACOS_NOTARY_KEY_ID.p8
+            echo "$MACOS_NOTARY_KEY" | base64 -d > "$KEY_PATH"
           else
             echo "Key is raw format, using directly..."
-            echo "$MACOS_NOTARY_KEY" > ~/private_keys/AuthKey_$MACOS_NOTARY_KEY_ID.p8
+            echo "$MACOS_NOTARY_KEY" > "$KEY_PATH"
           fi
-          
+
           # Ensure correct permissions
-          chmod 600 ~/private_keys/AuthKey_$MACOS_NOTARY_KEY_ID.p8
-          
+          chmod 600 "$KEY_PATH"
+
           # Validate key format
           echo "Validating key format..."
-          openssl pkey -in ~/private_keys/AuthKey_$MACOS_NOTARY_KEY_ID.p8 -text -noout || {
+          openssl pkey -in "$KEY_PATH" -text -noout || {
             echo "Invalid key format. Trying to fix newlines..."
             # Fix potential newline issues
-            echo "$MACOS_NOTARY_KEY" | tr -d '\r' | sed 's/\\n/\n/g' > ~/private_keys/AuthKey_$MACOS_NOTARY_KEY_ID.p8
-            chmod 600 ~/private_keys/AuthKey_$MACOS_NOTARY_KEY_ID.p8
+            echo "$MACOS_NOTARY_KEY" | tr -d '\r' | sed 's/\\n/\n/g' > "$KEY_PATH"
+            chmod 600 "$KEY_PATH"
           }
-          
+
           # Use unique profile name to avoid conflicts
           PROFILE_NAME="notary-profile-$GITHUB_RUN_ID"
-          echo "NOTARY_PROFILE=$PROFILE_NAME" >> $GITHUB_ENV
-          
+          echo "NOTARY_PROFILE=$PROFILE_NAME" >> "$GITHUB_ENV"
+
           # Store notarization credentials with unique profile
           xcrun notarytool store-credentials "$PROFILE_NAME" \
-            --key "~/private_keys/AuthKey_$MACOS_NOTARY_KEY_ID.p8" \
+            --key "$KEY_PATH" \
             --key-id "$MACOS_NOTARY_KEY_ID" \
             --issuer "$MACOS_NOTARY_ISSUER_ID"
 
@@ -379,7 +392,7 @@ jobs:
           path: ./
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.release_tag }}
           files: |
