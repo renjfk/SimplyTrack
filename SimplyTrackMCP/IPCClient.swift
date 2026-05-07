@@ -14,6 +14,11 @@ import NIOPosix
 enum MessageType: UInt8 {
     case getVersion = 0x01
     case getUsageActivity = 0x02
+    case getUsageRange = 0x03
+    case getRawSessions = 0x04
+    case getCurrentActivity = 0x05
+    case getHourlyTimeline = 0x06
+    case getDailySummary = 0x07
     case response = 0x80
     case error = 0x81
 }
@@ -130,6 +135,57 @@ actor IPCClient {
         body.append(typeFilterData)
 
         return try await sendMessage(type: .getUsageActivity, body: body)
+    }
+
+    func getUsageRange(
+        startTime: String?,
+        endTime: String?,
+        typeFilter: String?,
+        groupBy: String?,
+        includeActive: Bool?
+    ) async throws -> String? {
+        let request = UsageRangeRequest(
+            startTime: startTime,
+            endTime: endTime,
+            typeFilter: typeFilter,
+            groupBy: groupBy,
+            includeActive: includeActive
+        )
+        return try await sendJSONMessage(type: .getUsageRange, request: request)
+    }
+
+    func getRawSessions(
+        startTime: String?,
+        endTime: String?,
+        typeFilter: String?,
+        includeActive: Bool?
+    ) async throws -> String? {
+        let request = UsageRangeRequest(
+            startTime: startTime,
+            endTime: endTime,
+            typeFilter: typeFilter,
+            groupBy: nil,
+            includeActive: includeActive
+        )
+        return try await sendJSONMessage(type: .getRawSessions, request: request)
+    }
+
+    func getCurrentActivity() async throws -> String? {
+        return try await sendMessage(type: .getCurrentActivity, body: Data())
+    }
+
+    func getHourlyTimeline(dateString: String?, typeFilter: String?) async throws -> String? {
+        return try await sendJSONMessage(type: .getHourlyTimeline, request: UsageTimelineRequest(dateString: dateString, typeFilter: typeFilter))
+    }
+
+    func getDailySummary(dateString: String?, typeFilter: String?, limit: Int?) async throws -> String? {
+        return try await sendJSONMessage(type: .getDailySummary, request: UsageDailySummaryRequest(dateString: dateString, typeFilter: typeFilter, limit: limit))
+    }
+
+    private func sendJSONMessage<T: Encodable>(type: MessageType, request: T) async throws -> String? {
+        let encoder = JSONEncoder()
+        let body = try encoder.encode(request)
+        return try await sendMessage(type: type, body: body)
     }
 
     /// Send message to Swift-NIO server and wait for response
