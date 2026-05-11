@@ -3,7 +3,7 @@
 //  SimplyTrack
 //
 //  Handles browser integration, AppleScript execution, favicon fetching, and website detection
-//  Supports Safari, Chrome, Edge, Arc, Brave, Vivaldi, and Firefox through AppleScript communication for website tracking
+//  Supports Safari, Chrome, Edge, Arc, Brave, Vivaldi, Firefox, and ChatGPT Atlas through AppleScript communication for website tracking
 //
 
 import AppKit
@@ -56,17 +56,27 @@ actor FaviconCacheActor {
 
 class WebTrackingService {
 
-    private let browsers: [String: BrowserInterface] = [
-        SafariBrowser(),
-        ChromeBrowser(),
-        EdgeBrowser(),
-        ArcBrowser(),
-        BraveBrowser(),
-        VivaldiBrowser(),
-        FirefoxBrowser(),
-    ].reduce(into: [:]) { result, browser in
-        result[browser.bundleId] = browser
-    }
+    private let browsers: [String: BrowserInterface] = {
+        let atlasBrowser = AtlasBrowser()
+        var browsers = [
+            SafariBrowser(),
+            ChromeBrowser(),
+            EdgeBrowser(),
+            ArcBrowser(),
+            BraveBrowser(),
+            VivaldiBrowser(),
+            FirefoxBrowser(),
+            atlasBrowser,
+        ].reduce(into: [String: BrowserInterface]()) { result, browser in
+            result[browser.bundleId] = browser
+        }
+
+        for bundleId in AtlasBrowser.supportedBundleIds {
+            browsers[bundleId] = atlasBrowser
+        }
+
+        return browsers
+    }()
 
     private let faviconCacheActor = FaviconCacheActor()
 
