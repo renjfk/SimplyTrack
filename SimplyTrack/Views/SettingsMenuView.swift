@@ -20,6 +20,8 @@ struct SettingsMenuView: View {
     let viewMode: ContentView.ViewMode
     /// Controls display of data clearing confirmation dialog
     @Binding var showingClearDataConfirmation: Bool
+    /// Exports data for the currently selected period
+    let exportCSV: () -> Void
 
     var body: some View {
         Menu {
@@ -35,6 +37,14 @@ struct SettingsMenuView: View {
             }
 
             Divider()
+
+            Button(action: exportCSV) {
+                HStack {
+                    Text("Export \(viewMode == .day ? "Day" : "Week") CSV")
+                    Spacer()
+                    Image(systemName: "square.and.arrow.down")
+                }
+            }
 
             Button(action: {
                 showingClearDataConfirmation = true

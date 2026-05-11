@@ -16,13 +16,14 @@ import os
 enum MessageType: UInt8 {
     case getVersion = 0x01
     case getUsageActivity = 0x02
+    case exportCSV = 0x03
     case response = 0x80
     case error = 0x81
 }
 
 /// IPC message structure for Swift-NIO
 struct IPCMessage {
-    static let currentVersion: UInt8 = 1
+    static let currentVersion: UInt8 = 2
 
     let version: UInt8
     let type: MessageType
@@ -66,15 +67,7 @@ class IPCService: NSObject, @unchecked Sendable {
         do {
             let context = ModelContext(modelContainer)
 
-            // Parse date or use today
-            let targetDate: Date
-            if let dateString = dateString {
-                let formatter = DateFormatter()
-                formatter.dateFormat = "yyyy-MM-dd"
-                targetDate = formatter.date(from: dateString) ?? Date()
-            } else {
-                targetDate = Date()
-            }
+            let targetDate = Self.parseDateOrToday(dateString)
 
             // Convert string to UsageType
             let usageType = UsageType(rawValue: typeFilter) ?? .app
@@ -94,6 +87,18 @@ class IPCService: NSObject, @unchecked Sendable {
         }
     }
 
+    func exportCSV(dateString: String?, period: CSVExportService.Period, completion: @escaping (String?, Error?) -> Void) {
+        do {
+            let context = ModelContext(modelContainer)
+            let targetDate = Self.parseDateOrToday(dateString)
+            let csv = try CSVExportService.csvString(for: targetDate, period: period, modelContext: context)
+            completion(csv, nil)
+        } catch {
+            logger.error("Failed to export CSV: \(error.localizedDescription)")
+            completion(nil, error)
+        }
+    }
+
     /// Retrieves the current version of the SimplyTrack application
     ///
     /// This method returns the app's version string from the main bundle.
@@ -108,6 +113,14 @@ class IPCService: NSObject, @unchecked Sendable {
         // This prevents deadlocks when the main thread is busy with UI/DB work.
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
         completion(version)
+    }
+
+    private static func parseDateOrToday(_ dateString: String?) -> Date {
+        guard let dateString, !dateString.isEmpty else { return Date() }
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.date(from: dateString) ?? Date()
     }
 }
 
@@ -268,6 +281,8 @@ private final class IPCChannelHandler: ChannelInboundHandler {
             switch message.type {
             case .getUsageActivity:
                 response = await handleGetUsageActivity(body: message.body)
+            case .exportCSV:
+                response = await handleExportCSV(body: message.body)
             case .getVersion:
                 response = await handleGetVersion()
             default:
@@ -351,6 +366,53 @@ private final class IPCChannelHandler: ChannelInboundHandler {
         }
     }
 
+    private func handleExportCSV(body: Data) async -> IPCMessage {
+        // Parse parameters from body: [dateStringLength:1][dateString][periodLength:1][period]
+        var offset = 0
+
+        guard offset < body.count else {
+            return IPCMessage(type: .error, body: "Invalid exportCSV parameters".data(using: .utf8) ?? Data())
+        }
+
+        let dateStringLength = Int(body[offset])
+        offset += 1
+
+        var dateString: String?
+        if dateStringLength > 0 {
+            guard offset + dateStringLength <= body.count else {
+                return IPCMessage(type: .error, body: "Invalid exportCSV parameters".data(using: .utf8) ?? Data())
+            }
+            dateString = String(data: body.subdata(in: offset..<offset + dateStringLength), encoding: .utf8)
+            offset += dateStringLength
+        }
+
+        guard offset < body.count else {
+            return IPCMessage(type: .error, body: "Invalid exportCSV parameters".data(using: .utf8) ?? Data())
+        }
+
+        let periodLength = Int(body[offset])
+        offset += 1
+
+        guard periodLength > 0, offset + periodLength <= body.count,
+            let periodString = String(data: body.subdata(in: offset..<offset + periodLength), encoding: .utf8),
+            let period = CSVExportService.Period(rawValue: periodString)
+        else {
+            return IPCMessage(type: .error, body: "Invalid exportCSV period. Use 'day' or 'week'.".data(using: .utf8) ?? Data())
+        }
+
+        return await withCheckedContinuation { continuation in
+            service.exportCSV(dateString: dateString, period: period) { result, error in
+                let response: IPCMessage
+                if let error = error {
+                    response = IPCMessage(type: .error, body: error.localizedDescription.data(using: .utf8) ?? Data())
+                } else {
+                    response = IPCMessage(type: .response, body: (result ?? "").data(using: .utf8) ?? Data())
+                }
+                continuation.resume(returning: response)
+            }
+        }
+    }
+
     private func handleGetVersion() async -> IPCMessage {
         // getVersion is now synchronous (reads from bundle), no need for continuation bridging
         var response: IPCMessage?
@@ -373,15 +435,15 @@ private final class IPCProtocolCodec: ByteToMessageDecoder, MessageToByteEncoder
     init() {}
 
     func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-        // Need at least 4 bytes for header: [version:1][type:1][length:2]
-        guard buffer.readableBytes >= 4 else {
+        // Need at least 6 bytes for header: [version:1][type:1][length:4]
+        guard buffer.readableBytes >= 6 else {
             return .needMoreData
         }
 
         let readerIndex = buffer.readerIndex
         guard let version = buffer.readInteger(as: UInt8.self),
             let typeRaw = buffer.readInteger(as: UInt8.self),
-            let bodyLength = buffer.readInteger(endianness: .big, as: UInt16.self),
+            let bodyLength = buffer.readInteger(endianness: .big, as: UInt32.self),
             let type = MessageType(rawValue: typeRaw)
         else {
             buffer.moveReaderIndex(to: readerIndex)  // Reset on error
@@ -413,7 +475,7 @@ private final class IPCProtocolCodec: ByteToMessageDecoder, MessageToByteEncoder
     func encode(data: IPCMessage, out: inout ByteBuffer) throws {
         out.writeInteger(data.version)
         out.writeInteger(data.type.rawValue)
-        out.writeInteger(UInt16(data.body.count), endianness: .big)
+        out.writeInteger(UInt32(data.body.count), endianness: .big)
         out.writeBytes(data.body)
     }
 }

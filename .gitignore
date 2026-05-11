@@ -4,6 +4,7 @@ xcuserdata/
 # Build artifacts
 build/
 DerivedData/
+.derived-data-log-*
 
 # macOS system files
 .DS_Store

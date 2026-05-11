@@ -9,6 +9,7 @@ import AppKit
 import Combine
 import SwiftData
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Main application interface displayed in the menu bar popover.
 /// Coordinates usage data visualization, permission management, and user interactions.
@@ -81,6 +82,15 @@ struct ContentView: View {
         case day
         /// Weekly view showing aggregated week data
         case week
+
+        var csvExportPeriod: CSVExportService.Period {
+            switch self {
+            case .day:
+                return .day
+            case .week:
+                return .week
+            }
+        }
     }
 
     var body: some View {
@@ -333,7 +343,8 @@ struct ContentView: View {
 
             SettingsMenuView(
                 viewMode: viewMode,
-                showingClearDataConfirmation: $showingClearDataConfirmation
+                showingClearDataConfirmation: $showingClearDataConfirmation,
+                exportCSV: exportCSV
             )
         }
         .padding(.horizontal, 16)
@@ -783,6 +794,37 @@ struct ContentView: View {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.notifications") {
             NSWorkspace.shared.open(url)
         }
+    }
+
+    private func exportCSV() {
+        let savePanel = NSSavePanel()
+        savePanel.allowedContentTypes = [.commaSeparatedText]
+        savePanel.canCreateDirectories = true
+        savePanel.isExtensionHidden = false
+        savePanel.nameFieldStringValue = csvExportFileName
+
+        guard savePanel.runModal() == .OK, let url = savePanel.url else { return }
+
+        do {
+            let csv = try CSVExportService.csvString(for: selectedDate, period: viewMode.csvExportPeriod, modelContext: modelContext)
+            try csv.write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            handleError(error, context: "Failed to export CSV")
+        }
+    }
+
+    private var csvExportFileName: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+
+        if viewMode == .day {
+            return "simplytrack-day-\(formatter.string(from: selectedDate)).csv"
+        }
+
+        let calendar = Calendar.current
+        let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: selectedDate)?.start ?? selectedDate
+        let endOfWeek = calendar.date(byAdding: .day, value: 6, to: startOfWeek) ?? selectedDate
+        return "simplytrack-week-\(formatter.string(from: startOfWeek))-\(formatter.string(from: endOfWeek)).csv"
     }
 
     private func clearData(for date: Date, period: ViewMode) {

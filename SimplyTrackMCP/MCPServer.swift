@@ -117,7 +117,37 @@ actor MCPServer {
                             ]),
                         ]),
                     ])
-                )
+                ),
+                Tool(
+                    name: "export_usage_csv",
+                    description: """
+                        Export SimplyTrack usage sessions as CSV without opening the app UI.
+
+                        Use this when the user asks for raw tracked activity data, a CSV export, or data for import into spreadsheets and analysis tools.
+
+                        ## Response Format:
+
+                        Standard CSV text with this header:
+                        `start_time,end_time,category,name,identifier,duration_seconds,duration`
+
+                        Parameters:
+                        - period: `day` or `week` (default: `day`)
+                        - dateString: Target date in YYYY-MM-DD format, or omit for today. For week exports, the containing calendar week is exported.
+                        """,
+                    inputSchema: .object([
+                        "type": .string("object"),
+                        "properties": .object([
+                            "period": .object([
+                                "type": .string("string"),
+                                "description": .string("Export period: 'day' or 'week' (default: 'day')"),
+                            ]),
+                            "dateString": .object([
+                                "type": .string("string"),
+                                "description": .string("Specific date to export in YYYY-MM-DD format, or omit for today"),
+                            ]),
+                        ]),
+                    ])
+                ),
             ]
             return .init(tools: tools)
         }
@@ -125,7 +155,7 @@ actor MCPServer {
         // Register tool call handler
         await server.withMethodHandler(CallTool.self) { [weak self] params in
             guard let self = self else {
-                return .init(content: [.text("Server not available")], isError: true)
+                return .init(content: [.text(text: "Server not available")], isError: true)
             }
             return await self.handleCallTool(params: params)
         }
@@ -172,25 +202,49 @@ actor MCPServer {
 
                 if let usage = usage, !usage.isEmpty {
                     return .init(
-                        content: [.text(usage)],
+                        content: [.text(text: usage)],
                         isError: false
                     )
                 } else {
                     return .init(
-                        content: [.text("No usage data found")],
+                        content: [.text(text: "No usage data found")],
                         isError: false
                     )
                 }
             } catch {
                 return .init(
-                    content: [.text("Error fetching usage activity: \(error.localizedDescription)")],
+                    content: [.text(text: "Error fetching usage activity: \(error.localizedDescription)")],
+                    isError: true
+                )
+            }
+
+        case "export_usage_csv":
+            let dateString = params.arguments?["dateString"]?.stringValue
+            let period = params.arguments?["period"]?.stringValue ?? "day"
+
+            guard period == "day" || period == "week" else {
+                return .init(
+                    content: [.text(text: "Invalid period. Use 'day' or 'week'.")],
+                    isError: true
+                )
+            }
+
+            do {
+                let csv = try await ipcClient.exportCSV(dateString: dateString, period: period)
+                return .init(
+                    content: [.text(text: csv ?? "")],
+                    isError: false
+                )
+            } catch {
+                return .init(
+                    content: [.text(text: "Error exporting CSV: \(error.localizedDescription)")],
                     isError: true
                 )
             }
 
         default:
             return .init(
-                content: [.text("Unknown tool: \(params.name)")],
+                content: [.text(text: "Unknown tool: \(params.name)")],
                 isError: true
             )
         }
