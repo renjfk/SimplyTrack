@@ -91,6 +91,8 @@ class FirefoxBrowser: BaseBrowser {
                 PermissionManager.shared.handleBrowserError(
                     "Firefox requires additional setup for website tracking: open about:config in Firefox and set accessibility.force_disabled to -1."
                 )
+            } else if scriptResult.errorCode == -1712 {
+                logger.debug("Firefox Accessibility AppleScript timed out")
             } else if scriptResult.errorCode == -1743 || scriptResult.errorCode == -1744 {
                 PermissionManager.shared.handleSystemEventsPermissionResult(success: false)
             } else if scriptResult.errorCode == -1719 || scriptResult.errorCode == -1728 {
@@ -126,8 +128,8 @@ class FirefoxBrowser: BaseBrowser {
 
     /// Checks if Firefox is currently in private browsing mode.
     /// Firefox appends a localized private browsing indicator to the window title.
-    /// - Returns: true if private browsing is detected, false otherwise
-    override func isInPrivateBrowsingMode() -> Bool {
+    /// - Returns: true if private browsing is detected, false if regular browsing is detected, nil if detection failed
+    override func isInPrivateBrowsingMode() -> Bool? {
         let script = """
                 tell application "Firefox" to return name of front window
             """
@@ -135,7 +137,7 @@ class FirefoxBrowser: BaseBrowser {
         let scriptResult = executeAppleScript(script)
 
         guard let windowName = scriptResult.result else {
-            return false
+            return nil
         }
 
         return windowName.hasSuffix(Self.privateBrowsingSuffix)

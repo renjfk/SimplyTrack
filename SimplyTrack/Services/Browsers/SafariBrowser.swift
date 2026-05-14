@@ -32,8 +32,8 @@ class SafariBrowser: BaseBrowser {
 
     /// Checks if Safari is currently in private browsing mode.
     /// Uses System Events to check for private window menu item.
-    /// - Returns: true if private browsing is detected, false otherwise
-    override func isInPrivateBrowsingMode() -> Bool {
+    /// - Returns: true if private browsing is detected, false if regular browsing is detected, nil if detection failed
+    override func isInPrivateBrowsingMode() -> Bool? {
         let systemEventsScript = """
             tell application "System Events"
               tell process "Safari"
@@ -53,7 +53,10 @@ class SafariBrowser: BaseBrowser {
                 // Invalid index - transient race condition when menu items change during polling.
                 // Silently ignore; the next polling cycle will succeed.
                 logger.debug("Safari System Events transient error (invalid index): \(error.description)")
-                return false
+                return nil
+            } else if scriptResult.errorCode == -1712 {
+                logger.debug("Safari System Events AppleScript timed out")
+                return nil
             } else if scriptResult.errorCode == -1743 || scriptResult.errorCode == -1744 {
                 // System Events permission errors
                 PermissionManager.shared.handleSystemEventsPermissionResult(success: false)
@@ -61,7 +64,7 @@ class SafariBrowser: BaseBrowser {
                 // Log non-permission System Events errors
                 logger.error("Safari System Events AppleScript error: \(error.description)")
             }
-            return false
+            return nil
         }
 
         // If we successfully executed System Events AppleScript, permissions are working
@@ -74,6 +77,6 @@ class SafariBrowser: BaseBrowser {
             return isPrivate
         }
 
-        return false
+        return nil
     }
 }

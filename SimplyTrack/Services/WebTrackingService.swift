@@ -87,6 +87,17 @@ class WebTrackingService {
     /// Downloads and caches favicon if not already available.
     /// - Returns: Tuple containing domain and favicon data, nil if no website detected
     func getCurrentWebsiteData() async -> (domain: String, iconData: Data?)? {
+        guard let websiteInfo = getCurrentWebsiteInfo() else {
+            return nil
+        }
+
+        let iconData = await getFaviconData(for: websiteInfo.domain, sourceURL: websiteInfo.url)
+        return (domain: websiteInfo.domain, iconData: iconData)
+    }
+
+    /// Gets the current website domain and source URL without fetching favicon data.
+    /// - Returns: Tuple containing domain and URL, nil if no website detected
+    func getCurrentWebsiteInfo() -> (domain: String, url: String)? {
         guard let websiteInfo = getCurrentWebsiteWithBrowser() else {
             return nil
         }
@@ -94,8 +105,7 @@ class WebTrackingService {
         let domain = extractDomain(from: websiteInfo.url)
         guard !domain.isEmpty else { return nil }
 
-        let iconData = await getFaviconData(for: domain, sourceURL: websiteInfo.url)
-        return (domain: domain, iconData: iconData)
+        return (domain: domain, url: websiteInfo.url)
     }
 
     /// Gets the current website URL along with the browser bundle identifier.
@@ -111,8 +121,10 @@ class WebTrackingService {
         }
 
         // Check if private browsing is active and tracking is disabled
-        if !trackPrivateBrowsing && browser.isInPrivateBrowsingMode() {
-            return nil
+        if !trackPrivateBrowsing {
+            guard let isPrivateBrowsing = browser.isInPrivateBrowsingMode(), !isPrivateBrowsing else {
+                return nil
+            }
         }
 
         guard let url = browser.getCurrentURL() else { return nil }
@@ -152,7 +164,7 @@ class WebTrackingService {
 
     // MARK: - Website Icon Fetching
 
-    private func getFaviconData(for domain: String, sourceURL: String) async -> Data? {
+    func getFaviconData(for domain: String, sourceURL: String) async -> Data? {
         // Thread-safe cache read
         if let cachedData = await faviconCacheActor.get(domain) {
             return cachedData

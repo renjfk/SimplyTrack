@@ -30,8 +30,8 @@ class ChromeBrowser: BaseBrowser {
     /// Checks if Chrome is currently in incognito mode.
     /// Uses the reliable 'mode' property available in Chrome's AppleScript interface.
     /// Note: Permissions are already verified by getCurrentURL() call, so no need to re-check.
-    /// - Returns: true if incognito mode is detected, false otherwise
-    override func isInPrivateBrowsingMode() -> Bool {
+    /// - Returns: true if incognito mode is detected, false if regular browsing is detected, nil if detection failed
+    override func isInPrivateBrowsingMode() -> Bool? {
         let script = """
                 tell application "Google Chrome"
                     if (count of windows) > 0 then
@@ -45,7 +45,7 @@ class ChromeBrowser: BaseBrowser {
         guard let result = scriptResult.result,
             let isIncognito = Bool(result.lowercased())
         else {
-            return false
+            return nil
         }
 
         return isIncognito
