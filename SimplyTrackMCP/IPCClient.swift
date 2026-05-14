@@ -92,6 +92,7 @@ private final class IPCProtocolCodec: ByteToMessageDecoder, MessageToByteEncoder
 /// Swift-NIO client for communicating with SimplyTrack main app
 actor IPCClient {
     private let socketPath: String
+    private static let requestTimeout: TimeAmount = .seconds(10)
     private let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 
     init(socketPath: String) {
@@ -147,13 +148,20 @@ actor IPCClient {
         let clientSocketPath = self.socketPath  // Capture socket path before closure
 
         return try await withCheckedThrowingContinuation { continuation in
+            let responseState = IPCResponseState(continuation: continuation)
+            let timeoutTask = eventLoopGroup.next().scheduleTask(in: Self.requestTimeout) {
+                let timeoutError = NSError(domain: "IPCClient", code: -1, userInfo: [NSLocalizedDescriptionKey: "IPC request timed out after 10 seconds"])
+                responseState.fail(timeoutError, closeChannel: true)
+            }
+            responseState.setTimeoutTask(timeoutTask)
+
             let bootstrap = ClientBootstrap(group: eventLoopGroup)
                 .channelOption(.socketOption(.so_reuseaddr), value: 1)
                 .channelInitializer { channel in
                     channel.pipeline.addHandlers([
                         ByteToMessageHandler(IPCProtocolCodec()) as ChannelHandler,
                         MessageToByteHandler(IPCProtocolCodec()) as ChannelHandler,
-                        IPCClientHandler(continuation: continuation),
+                        IPCClientHandler(responseState: responseState),
                     ])
                 }
 
@@ -161,6 +169,8 @@ actor IPCClient {
             bootstrap.connect(unixDomainSocketPath: clientSocketPath).whenComplete { result in
                 switch result {
                 case .success(let channel):
+                    guard responseState.setChannel(channel) else { return }
+
                     // Create request message
                     let requestMessage = IPCMessage(type: type, body: body)
 
@@ -171,8 +181,7 @@ actor IPCClient {
                             // Message sent successfully, response will be handled by IPCClientHandler
                             break
                         case .failure(let error):
-                            continuation.resume(throwing: error)
-                            _ = channel.close()
+                            responseState.fail(error, closeChannel: true)
                         }
                     }
                 case .failure(let error):
@@ -182,12 +191,79 @@ actor IPCClient {
                     } else {
                         errorMessage = "Connection failed: \(error.localizedDescription). Is SimplyTrack app running?"
                     }
-                    continuation.resume(
-                        throwing: NSError(domain: "IPCClient", code: -1, userInfo: [NSLocalizedDescriptionKey: errorMessage])
-                    )
+                    responseState.fail(NSError(domain: "IPCClient", code: -1, userInfo: [NSLocalizedDescriptionKey: errorMessage]), closeChannel: false)
                 }
             }
 
+        }
+    }
+}
+
+// MARK: - Client Response State
+
+private final class IPCResponseState: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<String?, Error>?
+    private var channel: Channel?
+    private var timeoutTask: Scheduled<Void>?
+
+    init(continuation: CheckedContinuation<String?, Error>) {
+        self.continuation = continuation
+    }
+
+    func setChannel(_ channel: Channel) -> Bool {
+        lock.lock()
+        guard continuation != nil else {
+            lock.unlock()
+            channel.close(promise: nil)
+            return false
+        }
+        self.channel = channel
+        lock.unlock()
+        return true
+    }
+
+    func setTimeoutTask(_ task: Scheduled<Void>) {
+        lock.lock()
+        guard continuation != nil else {
+            lock.unlock()
+            task.cancel()
+            return
+        }
+        timeoutTask = task
+        lock.unlock()
+    }
+
+    func succeed(_ value: String?) {
+        complete(.success(value), closeChannel: true)
+    }
+
+    func fail(_ error: Error, closeChannel: Bool) {
+        complete(.failure(error), closeChannel: closeChannel)
+    }
+
+    private func complete(_ result: Result<String?, Error>, closeChannel: Bool) {
+        lock.lock()
+        guard let continuation else {
+            lock.unlock()
+            return
+        }
+
+        self.continuation = nil
+        let channelToClose = closeChannel ? channel : nil
+        channel = nil
+        let timeoutTaskToCancel = timeoutTask
+        timeoutTask = nil
+        lock.unlock()
+
+        timeoutTaskToCancel?.cancel()
+        channelToClose?.close(promise: nil)
+
+        switch result {
+        case .success(let value):
+            continuation.resume(returning: value)
+        case .failure(let error):
+            continuation.resume(throwing: error)
         }
     }
 }
@@ -198,25 +274,21 @@ actor IPCClient {
 private final class IPCClientHandler: ChannelInboundHandler {
     typealias InboundIn = IPCMessage
 
-    private let continuation: CheckedContinuation<String?, Error>
-    private var hasResponded = false
+    private let responseState: IPCResponseState
 
-    init(continuation: CheckedContinuation<String?, Error>) {
-        self.continuation = continuation
+    init(responseState: IPCResponseState) {
+        self.responseState = responseState
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        guard !hasResponded else { return }
-        hasResponded = true
-
         let message = unwrapInboundIn(data)
 
         // Check version compatibility
         guard message.version == IPCMessage.currentVersion else {
-            continuation.resume(
-                throwing: NSError(domain: "IPCClient", code: -1, userInfo: [NSLocalizedDescriptionKey: "Version mismatch: server=\(message.version), client=\(IPCMessage.currentVersion)"])
+            responseState.fail(
+                NSError(domain: "IPCClient", code: -1, userInfo: [NSLocalizedDescriptionKey: "Version mismatch: server=\(message.version), client=\(IPCMessage.currentVersion)"]),
+                closeChannel: true
             )
-            context.close(promise: nil)
             return
         }
 
@@ -224,21 +296,15 @@ private final class IPCClientHandler: ChannelInboundHandler {
         switch message.type {
         case .error:
             let errorMessage = String(data: message.body, encoding: .utf8) ?? "Unknown error"
-            continuation.resume(throwing: NSError(domain: "IPCClient", code: -1, userInfo: [NSLocalizedDescriptionKey: errorMessage]))
+            responseState.fail(NSError(domain: "IPCClient", code: -1, userInfo: [NSLocalizedDescriptionKey: errorMessage]), closeChannel: true)
         case .response:
-            continuation.resume(returning: String(data: message.body, encoding: .utf8))
+            responseState.succeed(String(data: message.body, encoding: .utf8))
         default:
-            continuation.resume(throwing: NSError(domain: "IPCClient", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unexpected response type"]))
+            responseState.fail(NSError(domain: "IPCClient", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unexpected response type"]), closeChannel: true)
         }
-
-        context.close(promise: nil)
     }
 
     func errorCaught(context: ChannelHandlerContext, error: Error) {
-        if !hasResponded {
-            hasResponded = true
-            continuation.resume(throwing: error)
-        }
-        context.close(promise: nil)
+        responseState.fail(error, closeChannel: true)
     }
 }
