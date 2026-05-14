@@ -29,13 +29,15 @@ protocol BrowserInterface {
     func getCurrentURL() -> String?
 
     /// Checks if the current active tab/window is in private browsing mode.
-    /// - Returns: true if private browsing is detected, false otherwise
-    func isInPrivateBrowsingMode() -> Bool
+    /// - Returns: true if private browsing is detected, false if regular browsing is detected, nil if detection failed
+    func isInPrivateBrowsingMode() -> Bool?
 }
 
 /// Base implementation providing common AppleScript execution functionality.
 /// Browser-specific classes can inherit from this to get shared AppleScript execution logic.
 class BaseBrowser: BrowserInterface {
+    private static let appleScriptTimeoutSeconds = 3
+
     let bundleId: String
     let displayName: String
 
@@ -60,6 +62,8 @@ class BaseBrowser: BrowserInterface {
             // Handle permission-related errors
             if scriptResult.errorCode == -1743 || scriptResult.errorCode == -1744 {
                 PermissionManager.shared.handleBrowserPermissionResult(success: false)
+            } else if scriptResult.errorCode == -1712 {
+                logger.debug("Browser (\(self.displayName)) AppleScript timed out")
             } else if scriptResult.errorCode == -1719 {
                 // Invalid index - transient race condition when tabs/windows change during polling.
                 // Silently ignore; the next polling cycle will succeed.
@@ -85,7 +89,7 @@ class BaseBrowser: BrowserInterface {
     }
 
     /// Default implementation - subclasses should override
-    func isInPrivateBrowsingMode() -> Bool {
+    func isInPrivateBrowsingMode() -> Bool? {
         fatalError("Subclasses must implement isInPrivateBrowsingMode()")
     }
 
@@ -95,7 +99,12 @@ class BaseBrowser: BrowserInterface {
     /// - Returns: AppleScriptResult containing the result, error code, and error details
     internal func executeAppleScript(_ script: String) -> AppleScriptResult {
         var error: NSDictionary?
-        let appleScript = NSAppleScript(source: script)
+        let wrappedScript = """
+            with timeout of \(Self.appleScriptTimeoutSeconds) seconds
+            \(script)
+            end timeout
+            """
+        let appleScript = NSAppleScript(source: wrappedScript)
         let result = appleScript?.executeAndReturnError(&error)
 
         let errorCode = error?["NSAppleScriptErrorNumber"] as? Int

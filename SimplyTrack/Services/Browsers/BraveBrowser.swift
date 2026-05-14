@@ -29,8 +29,8 @@ class BraveBrowser: BaseBrowser {
     /// Checks if Brave is currently in incognito mode.
     /// Uses the 'mode' property available in Brave's AppleScript interface (same as Chrome).
     /// Note: Permissions are already verified by getCurrentURL() call, so no need to re-check.
-    /// - Returns: true if incognito mode is detected, false otherwise
-    override func isInPrivateBrowsingMode() -> Bool {
+    /// - Returns: true if incognito mode is detected, false if regular browsing is detected, nil if detection failed
+    override func isInPrivateBrowsingMode() -> Bool? {
         let script = """
                 tell application "Brave Browser"
                     if (count of windows) > 0 then
@@ -44,7 +44,7 @@ class BraveBrowser: BaseBrowser {
         guard let result = scriptResult.result,
             let isIncognito = Bool(result.lowercased())
         else {
-            return false
+            return nil
         }
 
         return isIncognito

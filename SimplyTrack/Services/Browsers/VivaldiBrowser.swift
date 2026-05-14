@@ -29,8 +29,8 @@ class VivaldiBrowser: BaseBrowser {
     /// Checks if Vivaldi is currently in private mode.
     /// Uses the 'mode' property available in Chromium-based browser AppleScript interfaces.
     /// Note: Permissions are already verified by getCurrentURL() call, so no need to re-check.
-    /// - Returns: true if private mode is detected, false otherwise
-    override func isInPrivateBrowsingMode() -> Bool {
+    /// - Returns: true if private mode is detected, false if regular browsing is detected, nil if detection failed
+    override func isInPrivateBrowsingMode() -> Bool? {
         let script = """
                 tell application id "com.vivaldi.Vivaldi"
                     if (count of windows) > 0 then
@@ -44,7 +44,7 @@ class VivaldiBrowser: BaseBrowser {
         guard let result = scriptResult.result,
             let isPrivate = Bool(result.lowercased())
         else {
-            return false
+            return nil
         }
 
         return isPrivate

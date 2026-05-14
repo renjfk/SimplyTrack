@@ -47,6 +47,21 @@ class TrackingService {
 
     private var currentAppSession: UsageSession?
     private var currentWebsiteSession: UsageSession?
+    private var isWebsitePollInFlight = false
+    private var needsWebsitePollAfterCurrent = false
+    private var websitePollStartedAt: Date?
+    private var consecutiveWebsitePollFailures = 0
+    private var lastSuccessfulWebsitePollAt: Date?
+    private var activeWebsitePollTasks = 0
+    private var websitePollGeneration = 0
+    private var websitePollCooldownUntil: Date?
+    private var websiteIconFetchesInFlight: Set<String> = []
+
+    private static let websitePollGraceInterval: TimeInterval = 8.0
+    private static let websitePollStaleInterval: TimeInterval = 10.0
+    private static let websitePollCooldownInterval: TimeInterval = 5.0
+    private static let websitePollFailureThreshold = 3
+    private static let maxActiveWebsitePollTasks = 2
 
     // MARK: - Icon Cache
 
@@ -174,31 +189,110 @@ class TrackingService {
             updateAppSession(identifier: activeBundleId, name: activeName, now: now)
         }
 
-        // Track website usage asynchronously to avoid blocking app tracking
-        Task {
-            if let websiteData = await webTrackingService.getCurrentWebsiteData() {
-                await MainActor.run {
-                    // Queue website favicon if available
-                    if let iconData = websiteData.iconData {
-                        sessionPersistenceService.queueIconData(
-                            identifier: websiteData.domain,
-                            iconData: iconData
-                        )
-                    }
+        scheduleWebsitePoll(now: now)
+    }
 
-                    // Update or create website usage session
-                    updateWebsiteSession(
-                        identifier: websiteData.domain,
-                        name: websiteData.domain,
-                        now: now
-                    )
-                }
-            } else {
-                // No website detected, end current website session
-                await MainActor.run {
-                    endWebsiteSession()
+    private func scheduleWebsitePoll(now: Date) {
+        if let websitePollCooldownUntil, now < websitePollCooldownUntil {
+            maybeEndWebsiteSessionAfterGrace(now: now)
+            return
+        }
+
+        if isWebsitePollInFlight {
+            needsWebsitePollAfterCurrent = true
+            maybeHandleStaleWebsitePoll(now: now)
+            return
+        }
+
+        guard activeWebsitePollTasks < Self.maxActiveWebsitePollTasks else {
+            maybeEndWebsiteSessionAfterGrace(now: now)
+            return
+        }
+
+        isWebsitePollInFlight = true
+        websitePollStartedAt = now
+        activeWebsitePollTasks += 1
+        websitePollGeneration += 1
+        let pollGeneration = websitePollGeneration
+
+        Task {
+            let websiteInfo = webTrackingService.getCurrentWebsiteInfo()
+            await MainActor.run {
+                self.finishWebsitePoll(websiteInfo: websiteInfo, generation: pollGeneration, now: Date())
+            }
+        }
+    }
+
+    private func finishWebsitePoll(websiteInfo: (domain: String, url: String)?, generation: Int, now: Date) {
+        activeWebsitePollTasks = max(0, activeWebsitePollTasks - 1)
+        guard generation == websitePollGeneration else { return }
+
+        isWebsitePollInFlight = false
+        websitePollStartedAt = nil
+
+        if let websiteInfo {
+            consecutiveWebsitePollFailures = 0
+            lastSuccessfulWebsitePollAt = now
+
+            updateWebsiteSession(
+                identifier: websiteInfo.domain,
+                name: websiteInfo.domain,
+                now: now
+            )
+            scheduleWebsiteIconFetch(domain: websiteInfo.domain, sourceURL: websiteInfo.url)
+        } else {
+            consecutiveWebsitePollFailures += 1
+            maybeEndWebsiteSessionAfterGrace(now: now)
+        }
+
+        if needsWebsitePollAfterCurrent {
+            needsWebsitePollAfterCurrent = false
+            scheduleWebsitePoll(now: now)
+        }
+    }
+
+    private func maybeHandleStaleWebsitePoll(now: Date) {
+        guard let startedAt = websitePollStartedAt else { return }
+        guard now.timeIntervalSince(startedAt) >= Self.websitePollStaleInterval else { return }
+
+        logger.warning("Website poll stale; entering cooldown before recovery")
+        isWebsitePollInFlight = false
+        websitePollStartedAt = nil
+        needsWebsitePollAfterCurrent = false
+        consecutiveWebsitePollFailures += 1
+        websitePollGeneration += 1
+        websitePollCooldownUntil = now.addingTimeInterval(Self.websitePollCooldownInterval)
+        maybeEndWebsiteSessionAfterGrace(now: now)
+    }
+
+    private func scheduleWebsiteIconFetch(domain: String, sourceURL: String) {
+        guard !websiteIconFetchesInFlight.contains(domain) else { return }
+
+        websiteIconFetchesInFlight.insert(domain)
+        Task {
+            let iconData = await webTrackingService.getFaviconData(for: domain, sourceURL: sourceURL)
+            await MainActor.run {
+                self.websiteIconFetchesInFlight.remove(domain)
+                if let iconData {
+                    self.sessionPersistenceService.queueIconData(identifier: domain, iconData: iconData)
                 }
             }
+        }
+    }
+
+    private func maybeEndWebsiteSessionAfterGrace(now: Date) {
+        if consecutiveWebsitePollFailures >= Self.websitePollFailureThreshold {
+            endWebsiteSession()
+            return
+        }
+
+        guard let lastSuccessfulWebsitePollAt else {
+            endWebsiteSession()
+            return
+        }
+
+        if now.timeIntervalSince(lastSuccessfulWebsitePollAt) >= Self.websitePollGraceInterval {
+            endWebsiteSession()
         }
     }
 
@@ -254,6 +348,7 @@ class TrackingService {
     /// Public method that can be called by AppDelegate during app termination.
     func endAllActiveSessions() async {
         let now = Date()
+        invalidateCurrentWebsitePoll()
 
         // End app session if active
         if let appSession = currentAppSession {
@@ -268,6 +363,16 @@ class TrackingService {
             sessionPersistenceService.queueSession(websiteSession)
             currentWebsiteSession = nil
         }
+    }
+
+    private func invalidateCurrentWebsitePoll() {
+        websitePollGeneration += 1
+        isWebsitePollInFlight = false
+        needsWebsitePollAfterCurrent = false
+        websitePollStartedAt = nil
+        websitePollCooldownUntil = nil
+        consecutiveWebsitePollFailures = 0
+        lastSuccessfulWebsitePollAt = nil
     }
 
     // MARK: - Idle Detection
