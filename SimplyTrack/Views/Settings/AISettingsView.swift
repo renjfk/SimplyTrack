@@ -309,7 +309,7 @@ struct AISettingsView: View {
                 model: aiModel,
                 messages: testMessage,
                 temperature: 0.7,
-                maxTokens: 10
+                maxTokens: 20
             )
 
             if let content = response.choices.first?.message.content {
