@@ -120,9 +120,10 @@ class WebTrackingService {
             return nil
         }
 
-        // Check if private browsing is active and tracking is disabled
+        // Check if private browsing is active and tracking is disabled.
+        // Detection can fail transiently, especially for Safari via System Events; only block on confirmed private mode.
         if !trackPrivateBrowsing {
-            guard let isPrivateBrowsing = browser.isInPrivateBrowsingMode(), !isPrivateBrowsing else {
+            if browser.isInPrivateBrowsingMode() == true {
                 return nil
             }
         }
