@@ -39,10 +39,11 @@ insights without the bloat.
 
 ## ✨ Features
 
-- **📊 App & Website Tracking** - Monitor time spent in applications and websites (Safari, Chrome, Edge, Arc, Brave, Vivaldi, Firefox experimental)
+- **📊 App & Website Tracking** - Monitor time spent in applications and websites (Safari, Chrome, Edge, Arc, Brave, Vivaldi, Dia, Firefox experimental)
 - **📈 Visual Analytics** - Charts showing daily/weekly activity patterns
 - **🔔 Smart Notifications** - Optional AI-powered daily summary notifications with usage insights
 - **🤖 AI Integration** - Built-in MCP server for seamless integration with Claude and other AI assistants
+- **📥 CSV Export** - Export usage data as CSV via UI or MCP for analysis in spreadsheets
 - **🔒 Privacy-First** - All data stored locally, secure keychain storage for API keys, optional private browsing tracking
 - **🚀 Menu Bar Interface** - Clean popover UI, native macOS integration
 - **🔍 Smart Detection** - Automatic idle detection, session management, and private browsing detection
@@ -134,6 +135,9 @@ SimplyTrack includes a built-in **Model Context Protocol (MCP) server** that all
   - Filter by applications or websites
   - Customize time ranges and top activity percentages
   - Get formatted data perfect for AI analysis
+- **`export_usage_csv`** - Export usage sessions as CSV
+  - Daily or weekly export periods
+  - Standard CSV format for spreadsheets and analysis tools
 
 ### Example Usage
 
