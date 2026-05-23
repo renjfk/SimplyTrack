@@ -23,6 +23,7 @@ struct SimplyTrackApp: App {
         // Settings window scene - the main user interface for configuration
         Settings {
             SettingsWindow()
+                .environmentObject(appDelegate)
         }
         .modelContainer(DatabaseManager.shared.modelContainer)  // Inject SwiftData container
         .commands {

@@ -29,6 +29,8 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
     @AppStorage("summaryNotificationsEnabled", store: .app) private var summaryNotificationsEnabled = false
     @AppStorage("aiEndpoint", store: .app) private var aiEndpoint = ""
     @AppStorage("aiModel", store: .app) private var aiModel = ""
+    @AppStorage("aiChatTemplateKwargs", store: .app) private var aiChatTemplateKwargs = ""
+    @AppStorage("aiReasoningEffort", store: .app) private var aiReasoningEffort = ""
     @AppStorage("summaryNotificationPrompt", store: .app) private var summaryNotificationPrompt = AppStorageDefaults.summaryNotificationPrompt
     @AppStorage("summaryNotificationTime", store: .app) private var summaryNotificationTime: Double = AppStorageDefaults.summaryNotificationTime
     @AppStorage("lastDailySummaryNotification", store: .app) private var lastDailySummaryNotification: Double = 0
@@ -83,6 +85,23 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 
+    /// Generates and delivers a test summary notification for the requested date.
+    func sendTestSummaryNotification(for date: Date) async throws {
+        let center = UNUserNotificationCenter.current()
+        let granted = try await center.requestAuthorization(options: [.alert, .sound])
+        guard granted else {
+            appDelegate?.notificationPermissionDenied = true
+            throw NotificationError.permissionDenied
+        }
+
+        try await sendSummaryNotification(
+            for: date,
+            title: "Test Usage Summary",
+            identifier: "test-summary-\(UUID().uuidString)",
+            includeSummaryDate: false
+        )
+    }
+
     // MARK: - Daily Summary Logic
 
     private func checkForDailyNotification() async {
@@ -122,34 +141,47 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
         // Calculate yesterday's date for usage aggregation
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
 
+        do {
+            try await sendSummaryNotification(
+                for: yesterday,
+                title: "Yesterday's Usage Summary",
+                identifier: "daily-summary",
+                includeSummaryDate: true
+            )
+        } catch {
+            logger.error("Failed to generate daily summary: \(error.localizedDescription)")
+        }
+    }
+
+    private func sendSummaryNotification(
+        for date: Date,
+        title: String,
+        identifier: String,
+        includeSummaryDate: Bool
+    ) async throws {
         let appSummary: String
         let websiteSummary: String
 
         // Run aggregation on a background context to avoid blocking the main thread
         let container = modelContainer
-        do {
-            (appSummary, websiteSummary) = try await Task.detached(priority: .utility) {
-                let context = ModelContext(container)
-                context.autosaveEnabled = false
+        (appSummary, websiteSummary) = try await Task.detached(priority: .utility) {
+            let context = ModelContext(container)
+            context.autosaveEnabled = false
 
-                let app = try UsageAggregator.aggregateUsage(
-                    for: yesterday,
-                    type: .app,
-                    topPercentage: 0.8,
-                    modelContext: context
-                )
-                let website = try UsageAggregator.aggregateUsage(
-                    for: yesterday,
-                    type: .website,
-                    topPercentage: 0.8,
-                    modelContext: context
-                )
-                return (app, website)
-            }.value
-        } catch {
-            logger.error("Failed to aggregate usage data: \(error.localizedDescription)")
-            return
-        }
+            let app = try UsageAggregator.aggregateUsage(
+                for: date,
+                type: .app,
+                topPercentage: 0.8,
+                modelContext: context
+            )
+            let website = try UsageAggregator.aggregateUsage(
+                for: date,
+                type: .website,
+                topPercentage: 0.8,
+                modelContext: context
+            )
+            return (app, website)
+        }.value
 
         // Substitute usage data into the user's prompt template
         let fullPrompt =
@@ -157,43 +189,52 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
             .replacingOccurrences(of: "{appSummary}", with: appSummary)
             .replacingOccurrences(of: "{websiteSummary}", with: websiteSummary)
 
-        do {
-            // Retrieve AI service API key from secure keychain storage
-            let apiKey = try KeychainManager.shared.retrieve(key: "aiApiKey") ?? ""
-            guard !apiKey.isEmpty else {
-                logger.error("API key not found in keychain for daily summary")
-                return
-            }
+        // Retrieve AI service API key from secure keychain storage
+        let apiKey = try KeychainManager.shared.retrieve(key: "aiApiKey") ?? ""
 
-            // Generate AI summary using configured endpoint and model
-            let openAI = OpenAIService(apiURL: aiEndpoint, apiKey: apiKey)
-            let messages = [OpenAIChatMessage(role: "user", content: fullPrompt)]
-            let response = try await openAI.chatCompletions(
-                model: aiModel,
-                messages: messages,
-                temperature: 0.7,
-                maxTokens: 300
-            )
-
-            // Create and deliver notification with AI-generated summary
-            if let aiSummary = response.choices.first?.message.content {
-                let content = UNMutableNotificationContent()
-                content.title = "Yesterday's Usage Summary"
-                content.body = aiSummary
-                content.sound = UNNotificationSound.default
-                content.userInfo = ["summaryDate": yesterday.timeIntervalSince1970]
-
-                let request = UNNotificationRequest(
-                    identifier: "daily-summary",
-                    content: content,
-                    trigger: nil
-                )
-
-                try await UNUserNotificationCenter.current().add(request)
-            }
-        } catch {
-            logger.error("Failed to generate daily summary: \(error.localizedDescription)")
+        let aiSummary = try await generateAISummary(prompt: fullPrompt, apiKey: apiKey)
+        guard !aiSummary.isEmpty else {
+            throw NotificationError.emptySummary
         }
+
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = aiSummary
+        content.sound = UNNotificationSound.default
+
+        if includeSummaryDate {
+            content.userInfo = ["summaryDate": date.timeIntervalSince1970]
+        }
+
+        let request = UNNotificationRequest(
+            identifier: identifier,
+            content: content,
+            trigger: nil
+        )
+
+        try await UNUserNotificationCenter.current().add(request)
+    }
+
+    private func generateAISummary(prompt: String, apiKey: String) async throws -> String {
+        let openAI = OpenAIService(apiURL: aiEndpoint, apiKey: apiKey)
+        let chatTemplateKwargs = try OpenAIService.parseChatTemplateKwargs(aiChatTemplateKwargs)
+        let reasoningEffort = OpenAIService.parseReasoningEffort(aiReasoningEffort)
+        let response = try await openAI.chatCompletions(
+            model: aiModel,
+            messages: [
+                OpenAIChatMessage(
+                    role: "system",
+                    content: "Return only the final user-facing summary. Do not include thinking process, reasoning steps, analysis, or chain-of-thought."
+                ),
+                OpenAIChatMessage(role: "user", content: prompt),
+            ],
+            temperature: 0.7,
+            maxTokens: 2048,
+            chatTemplateKwargs: chatTemplateKwargs,
+            reasoningEffort: reasoningEffort
+        )
+
+        return OpenAIService.stripThinkingContent(from: response.choices.first?.message.content ?? "")
     }
 
     // MARK: - UNUserNotificationCenterDelegate
@@ -234,5 +275,19 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
     /// - Returns: Presentation options allowing banner and sound
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
         return [.banner, .sound]
+    }
+}
+
+enum NotificationError: LocalizedError {
+    case permissionDenied
+    case emptySummary
+
+    var errorDescription: String? {
+        switch self {
+        case .permissionDenied:
+            return "Notification permission is required"
+        case .emptySummary:
+            return "AI response was empty"
+        }
     }
 }

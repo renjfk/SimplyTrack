@@ -163,6 +163,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         menuBarManager?.togglePopover()
     }
 
+    /// Triggers a test summary notification for the currently selected date.
+    @MainActor func sendTestSummaryNotification() async throws {
+        try await notificationService?.sendTestSummaryNotification(for: selectedDate)
+    }
+
     // MARK: - Release Notes
 
     /// Checks if the app version has changed since last launch and shows release notes if needed.

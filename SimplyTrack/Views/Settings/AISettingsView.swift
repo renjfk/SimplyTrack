@@ -12,13 +12,18 @@ import os
 /// Handles API endpoint configuration, authentication, and notification scheduling.
 struct AISettingsView: View {
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "AISettingsView")
+    @EnvironmentObject private var appDelegate: AppDelegate
 
     @AppStorage("aiEndpoint", store: .app) private var aiEndpoint = ""
     @AppStorage("aiModel", store: .app) private var aiModel = ""
+    @AppStorage("aiChatTemplateKwargs", store: .app) private var aiChatTemplateKwargs = ""
+    @AppStorage("aiReasoningEffort", store: .app) private var aiReasoningEffort = ""
 
     @State private var aiApiKey = ""
     @State private var isTestingConnection = false
+    @State private var isSendingTestNotification = false
     @State private var testResult: TestResult?
+    @State private var testNotificationResult: TestResult?
     @StateObject private var claudeConfigManager = ClaudeDesktopConfigManager()
 
     // Notification settings
@@ -32,6 +37,10 @@ struct AISettingsView: View {
 
     private var canTestAIConnection: Bool {
         !aiEndpoint.isEmpty && !aiModel.isEmpty
+    }
+
+    private var canSendTestNotification: Bool {
+        canTestAIConnection && !summaryNotificationPrompt.isEmpty
     }
 
     enum TestResult {
@@ -84,6 +93,36 @@ struct AISettingsView: View {
                     ) {
                         Image(systemName: "brain")
                             .foregroundColor(.purple)
+                            .frame(width: 16)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .top) {
+                            Image(systemName: "curlybraces")
+                                .foregroundColor(.indigo)
+                                .frame(width: 16)
+                            TextField(text: $aiChatTemplateKwargs, prompt: Text("{\"enable_thinking\":false}"), axis: .vertical) {
+                                Text("Chat Template Kwargs")
+                            }
+                            .font(.system(.body, design: .monospaced))
+                            .lineLimit(2...5)
+                            Spacer()
+                        }
+
+                        Text("Optional JSON object sent as chat_template_kwargs. For Qwen reasoning control, use {\"enable_thinking\":false}.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    ValidatedTextField(
+                        title: "Reasoning Effort",
+                        text: $aiReasoningEffort,
+                        placeholder: "low",
+                        helpText: "Optional value sent as reasoning_effort for compatible providers, such as low, medium, or high. Leave empty to omit.",
+                        required: false
+                    ) {
+                        Image(systemName: "dial.low")
+                            .foregroundColor(.indigo)
                             .frame(width: 16)
                     }
 
@@ -204,6 +243,48 @@ struct AISettingsView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .top) {
+                            Image(systemName: "paperplane.fill")
+                                .foregroundColor(.green)
+                                .frame(width: 16)
+                            Button("Send Test Notification") {
+                                Task {
+                                    await sendTestNotification()
+                                }
+                            }
+                            .disabled(!canSendTestNotification || isSendingTestNotification)
+
+                            if isSendingTestNotification {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                    .frame(width: 16, height: 16)
+                            }
+
+                            Spacer()
+                        }
+
+                        Text("Generate an AI summary for the currently selected day and deliver it as a notification now. Your AI provider may charge for each token used.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    if let result = testNotificationResult {
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: result.isSuccess ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                .foregroundColor(result.isSuccess ? .green : .red)
+                                .font(.caption)
+
+                            Text(result.message)
+                                .font(.caption)
+                                .foregroundColor(result.isSuccess ? .green : .red)
+                                .multilineTextAlignment(.leading)
+
+                            Spacer()
+                        }
+                        .padding(.top, 4)
+                    }
                 }
 
                 Section("AI Tool Integration") {
@@ -301,19 +382,33 @@ struct AISettingsView: View {
         testResult = nil
 
         do {
-            let apiKey = aiApiKey.isEmpty ? "test-key" : aiApiKey
-            let openAI = OpenAIService(apiURL: aiEndpoint, apiKey: apiKey)
-            let testMessage = [OpenAIChatMessage(role: "user", content: "Hello")]
+            let openAI = OpenAIService(apiURL: aiEndpoint, apiKey: aiApiKey)
+            let testMessage = [
+                OpenAIChatMessage(
+                    role: "system",
+                    content: "Reply with only the final answer. Do not include any thinking process, reasoning, or analysis."
+                ),
+                OpenAIChatMessage(role: "user", content: "Reply with exactly OK."),
+            ]
+            let chatTemplateKwargs = try OpenAIService.parseChatTemplateKwargs(aiChatTemplateKwargs)
+            let reasoningEffort = OpenAIService.parseReasoningEffort(aiReasoningEffort)
 
             let response = try await openAI.chatCompletions(
                 model: aiModel,
                 messages: testMessage,
                 temperature: 0.7,
-                maxTokens: 20
+                maxTokens: 2048,
+                chatTemplateKwargs: chatTemplateKwargs,
+                reasoningEffort: reasoningEffort
             )
 
             if let content = response.choices.first?.message.content {
-                testResult = .success("Connection successful! Response: \"\(content.prefix(50))...\"")
+                let sanitizedContent = OpenAIService.stripThinkingContent(from: content)
+                if sanitizedContent.isEmpty {
+                    testResult = .success("Connection successful! The model responded, but only returned reasoning text.")
+                } else {
+                    testResult = .success("Connection successful! Response: \"\(sanitizedContent.prefix(50))...\"")
+                }
             } else {
                 testResult = .success("Connection successful!")
             }
@@ -332,6 +427,20 @@ struct AISettingsView: View {
         }
 
         isTestingConnection = false
+    }
+
+    private func sendTestNotification() async {
+        isSendingTestNotification = true
+        testNotificationResult = nil
+
+        do {
+            try await appDelegate.sendTestSummaryNotification()
+            testNotificationResult = .success("Test notification sent")
+        } catch {
+            testNotificationResult = .failure("Test notification failed: \(error.localizedDescription)")
+        }
+
+        isSendingTestNotification = false
     }
 
     private func loadApiKeyFromKeychain() {
